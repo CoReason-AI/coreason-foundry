@@ -9,10 +9,10 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Project(BaseModel):
@@ -24,3 +24,26 @@ class Project(BaseModel):
     name: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     current_draft_id: Optional[UUID] = None
+
+
+class Draft(BaseModel):
+    """
+    Represents an immutable version of the agent's state.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    project_id: UUID
+    version_number: int
+    prompt_text: str
+    model_configuration: Dict[str, Any] = Field(description="Configuration parameters for the model")
+    author_id: UUID
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("version_number")
+    @classmethod
+    def validate_version_number(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("Version number must be positive")
+        return v
