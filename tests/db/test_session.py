@@ -16,7 +16,7 @@ from coreason_foundry.db.session import DatabaseSessionManager, DatabaseSettings
 
 
 @pytest.mark.asyncio
-async def test_session_manager_init():
+async def test_session_manager_init() -> None:
     settings = DatabaseSettings(url="sqlite+aiosqlite:///:memory:")
     manager = DatabaseSessionManager(settings)
     manager.init()
@@ -28,7 +28,7 @@ async def test_session_manager_init():
 
 
 @pytest.mark.asyncio
-async def test_session_manager_session_lifecycle():
+async def test_session_manager_session_lifecycle() -> None:
     settings = DatabaseSettings(url="sqlite+aiosqlite:///:memory:")
     manager = DatabaseSessionManager(settings)
     manager.init()
@@ -42,7 +42,7 @@ async def test_session_manager_session_lifecycle():
 
 
 @pytest.mark.asyncio
-async def test_session_manager_not_initialized():
+async def test_session_manager_not_initialized() -> None:
     manager = DatabaseSessionManager()
     with pytest.raises(Exception, match="DatabaseSessionManager is not initialized"):
         async with manager.session():
@@ -50,7 +50,7 @@ async def test_session_manager_not_initialized():
 
 
 @pytest.mark.asyncio
-async def test_session_manager_exception_rollback():
+async def test_session_manager_exception_rollback() -> None:
     settings = DatabaseSettings(url="sqlite+aiosqlite:///:memory:")
     manager = DatabaseSessionManager(settings)
     manager.init()

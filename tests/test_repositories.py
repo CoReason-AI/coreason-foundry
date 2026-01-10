@@ -8,11 +8,12 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
+from typing import AsyncGenerator
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from coreason_foundry.db.base import Base
 from coreason_foundry.managers import ProjectManager
@@ -24,7 +25,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 @pytest_asyncio.fixture
-async def db_session():
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -37,7 +38,7 @@ async def db_session():
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_repo_create_and_get(db_session):
+async def test_sqlalchemy_repo_create_and_get(db_session: AsyncSession) -> None:
     repo = SqlAlchemyProjectRepository(db_session)
     project = Project(name="Integration Test Project")
 
@@ -54,14 +55,14 @@ async def test_sqlalchemy_repo_create_and_get(db_session):
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_repo_get_not_found(db_session):
+async def test_sqlalchemy_repo_get_not_found(db_session: AsyncSession) -> None:
     repo = SqlAlchemyProjectRepository(db_session)
     retrieved = await repo.get(uuid4())
     assert retrieved is None
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_repo_list_all(db_session):
+async def test_sqlalchemy_repo_list_all(db_session: AsyncSession) -> None:
     repo = SqlAlchemyProjectRepository(db_session)
 
     p1 = Project(name="Project A")
@@ -79,7 +80,7 @@ async def test_sqlalchemy_repo_list_all(db_session):
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_repo_update(db_session):
+async def test_sqlalchemy_repo_update(db_session: AsyncSession) -> None:
     repo = SqlAlchemyProjectRepository(db_session)
     project = Project(name="Original Name")
     await repo.save(project)
@@ -94,12 +95,13 @@ async def test_sqlalchemy_repo_update(db_session):
 
     # Verify persistence
     retrieved = await repo.get(project.id)
+    assert retrieved is not None
     assert retrieved.name == "Updated Name"
     assert retrieved.current_draft_id == new_draft_id
 
 
 @pytest.mark.asyncio
-async def test_manager_integration_with_sqlalchemy(db_session):
+async def test_manager_integration_with_sqlalchemy(db_session: AsyncSession) -> None:
     # Verify ProjectManager works with the real SQL repo
     repo = SqlAlchemyProjectRepository(db_session)
     manager = ProjectManager(repo)

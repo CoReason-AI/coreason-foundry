@@ -9,7 +9,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
+from alembic import context  # type: ignore
 from coreason_foundry.db.base import Base
 from coreason_foundry.db.session import DatabaseSettings
 
@@ -32,7 +32,7 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-def get_url():
+def get_url() -> str:
     return DatabaseSettings().url
 
 
