@@ -8,7 +8,6 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 
@@ -16,34 +15,8 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from coreason_foundry.db.models import DraftORM, ProjectORM
-from coreason_foundry.managers import ProjectRepository
+from coreason_foundry.managers import DraftRepository, ProjectRepository
 from coreason_foundry.models import Draft, Project
-
-
-class DraftRepository(ABC):
-    """
-    Abstract base class for Draft storage.
-    """
-
-    @abstractmethod
-    async def save(self, draft: Draft) -> Draft:
-        """Saves a draft."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get(self, draft_id: UUID) -> Optional[Draft]:
-        """Retrieves a draft by ID."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def list_by_project(self, project_id: UUID) -> List[Draft]:
-        """Lists all drafts for a project."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get_latest_version(self, project_id: UUID) -> Optional[int]:
-        """Retrieves the latest version number for a project."""
-        pass  # pragma: no cover
 
 
 class SqlAlchemyProjectRepository(ProjectRepository):
