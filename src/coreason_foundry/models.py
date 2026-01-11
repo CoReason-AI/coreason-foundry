@@ -47,3 +47,25 @@ class Draft(BaseModel):
         if v < 1:
             raise ValueError("Version number must be positive")
         return v
+
+
+class Comment(BaseModel):
+    """
+    Represents a contextual comment on a specific draft.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    draft_id: UUID
+    target_field: str
+    text: str
+    author_id: UUID
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Comment text cannot be empty")
+        return v

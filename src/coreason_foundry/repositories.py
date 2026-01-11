@@ -11,12 +11,12 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import desc, select
+from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from coreason_foundry.db.models import DraftORM, ProjectORM
-from coreason_foundry.managers import DraftRepository, ProjectRepository
-from coreason_foundry.models import Draft, Project
+from coreason_foundry.db.models import CommentORM, DraftORM, ProjectORM
+from coreason_foundry.managers import CommentRepository, DraftRepository, ProjectRepository
+from coreason_foundry.models import Comment, Draft, Project
 
 
 class SqlAlchemyProjectRepository(ProjectRepository):
@@ -148,3 +148,69 @@ class SqlAlchemyDraftRepository(DraftRepository):
         )
         version: Optional[int] = result.scalar_one_or_none()
         return version
+
+
+class SqlAlchemyCommentRepository(CommentRepository):
+    """
+    SQLAlchemy implementation of CommentRepository.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def save(self, comment: Comment) -> Comment:
+        comment_orm = CommentORM(
+            id=comment.id,
+            draft_id=comment.draft_id,
+            target_field=comment.target_field,
+            text=comment.text,
+            author_id=comment.author_id,
+            created_at=comment.created_at,
+        )
+        merged_orm = await self.session.merge(comment_orm)
+        await self.session.flush()
+
+        return Comment(
+            id=merged_orm.id,
+            draft_id=merged_orm.draft_id,
+            target_field=merged_orm.target_field,
+            text=merged_orm.text,
+            author_id=merged_orm.author_id,
+            created_at=merged_orm.created_at,
+        )
+
+    async def get(self, comment_id: UUID) -> Optional[Comment]:
+        result = await self.session.execute(select(CommentORM).where(CommentORM.id == comment_id))
+        comment_orm = result.scalar_one_or_none()
+        if not comment_orm:
+            return None
+        return Comment(
+            id=comment_orm.id,
+            draft_id=comment_orm.draft_id,
+            target_field=comment_orm.target_field,
+            text=comment_orm.text,
+            author_id=comment_orm.author_id,
+            created_at=comment_orm.created_at,
+        )
+
+    async def list_by_draft(self, draft_id: UUID) -> List[Comment]:
+        result = await self.session.execute(
+            select(CommentORM).where(CommentORM.draft_id == draft_id).order_by(CommentORM.created_at.asc())
+        )
+        comments_orm = result.scalars().all()
+        return [
+            Comment(
+                id=c.id,
+                draft_id=c.draft_id,
+                target_field=c.target_field,
+                text=c.text,
+                author_id=c.author_id,
+                created_at=c.created_at,
+            )
+            for c in comments_orm
+        ]
+
+    async def delete(self, comment_id: UUID) -> bool:
+        result = await self.session.execute(delete(CommentORM).where(CommentORM.id == comment_id))
+        await self.session.flush()
+        return result.rowcount > 0  # type: ignore
