@@ -65,6 +65,35 @@ class DraftRepository(ABC):
         pass  # pragma: no cover
 
 
+class LockRegistry(ABC):
+    """
+    Abstract base class for Distributed Locking.
+    """
+
+    @abstractmethod
+    async def acquire(self, project_id: UUID, field: str, user_id: UUID, ttl_seconds: int = 60) -> bool:
+        """
+        Acquires a lock on a specific field of a project.
+        Returns True if successful, False if already locked by another user.
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def release(self, project_id: UUID, field: str, user_id: UUID) -> bool:
+        """
+        Releases a lock if it is held by the specified user.
+        Returns True if released, False if lock was not held by user.
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def get_lock_owner(self, project_id: UUID, field: str) -> Optional[UUID]:
+        """
+        Returns the user_id of the current lock owner, or None if unlocked.
+        """
+        pass  # pragma: no cover
+
+
 class InMemoryProjectRepository(ProjectRepository):
     """
     In-memory implementation of ProjectRepository.
