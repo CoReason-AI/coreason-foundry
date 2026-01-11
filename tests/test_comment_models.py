@@ -35,5 +35,6 @@ def test_comment_validation_empty_text() -> None:
 def test_comment_immutability() -> None:
     """Test that comment fields cannot be modified after creation."""
     comment = Comment(draft_id=uuid4(), target_field="prompt_text", text="Original text", author_id=uuid4())
+    # Pydantic V2 frozen models raise ValidationError on assignment
     with pytest.raises(ValidationError):
-        object.__setattr__(comment, "text", "New text")
+        comment.text = "New text"
