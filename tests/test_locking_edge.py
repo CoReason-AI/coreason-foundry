@@ -136,3 +136,23 @@ async def test_reacquisition_fails(lock_registry: RedisLockRegistry) -> None:
 
     # Try to acquire again
     assert await lock_registry.acquire(project_id, field, user_id) is False
+
+
+@pytest.mark.asyncio
+async def test_corrupted_lock_data(lock_registry: RedisLockRegistry, redis_client: FakeAsyncRedis) -> None:
+    """
+    Verify that if Redis contains data that is not a valid UUID (corruption),
+    get_lock_owner returns None gracefully instead of crashing.
+    """
+    project_id = uuid.uuid4()
+    field = "corrupted_field"
+
+    # Manually inject bad data
+    key = lock_registry._make_key(project_id, field)
+    await redis_client.set(key, "NOT-A-VALID-UUID")
+
+    # Attempt to read owner
+    owner = await lock_registry.get_lock_owner(project_id, field)
+
+    # Expectation: None (graceful failure)
+    assert owner is None
