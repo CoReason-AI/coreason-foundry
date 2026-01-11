@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from coreason_foundry.exceptions import ProjectNotFoundError
-from coreason_foundry.models import Draft, Project
+from coreason_foundry.models import Comment, Draft, Project
 from coreason_foundry.utils.logger import logger
 
 
@@ -63,6 +63,32 @@ class DraftRepository(ABC):
     @abstractmethod
     async def get_latest_version(self, project_id: UUID) -> Optional[int]:
         """Retrieves the latest version number for a project."""
+        pass  # pragma: no cover
+
+
+class CommentRepository(ABC):
+    """
+    Abstract base class for Comment storage.
+    """
+
+    @abstractmethod
+    async def save(self, comment: Comment) -> Comment:
+        """Saves a comment."""
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def get(self, comment_id: UUID) -> Optional[Comment]:
+        """Retrieves a comment by ID."""
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def list_by_draft(self, draft_id: UUID) -> List[Comment]:
+        """Lists all comments for a draft."""
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def delete(self, comment_id: UUID) -> bool:
+        """Deletes a comment by ID. Returns True if deleted, False if not found."""
         pass  # pragma: no cover
 
 
@@ -158,6 +184,38 @@ class InMemoryDraftRepository(DraftRepository):
         if not drafts:
             return None
         return drafts[-1].version_number
+
+
+class InMemoryCommentRepository(CommentRepository):
+    """
+    In-memory implementation of CommentRepository.
+    """
+
+    def __init__(self) -> None:
+        self._comments: dict[UUID, Comment] = {}
+
+    async def save(self, comment: Comment) -> Comment:
+        self._comments[comment.id] = copy.deepcopy(comment)
+        return copy.deepcopy(comment)
+
+    async def get(self, comment_id: UUID) -> Optional[Comment]:
+        comment = self._comments.get(comment_id)
+        if comment:
+            return copy.deepcopy(comment)
+        return None
+
+    async def list_by_draft(self, draft_id: UUID) -> List[Comment]:
+        comments = sorted(
+            [c for c in self._comments.values() if c.draft_id == draft_id],
+            key=lambda c: c.created_at,
+        )
+        return [copy.deepcopy(c) for c in comments]
+
+    async def delete(self, comment_id: UUID) -> bool:
+        if comment_id in self._comments:
+            del self._comments[comment_id]
+            return True
+        return False
 
 
 class ProjectManager:
