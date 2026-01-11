@@ -8,6 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
+import copy
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -73,14 +74,18 @@ class InMemoryProjectRepository(ProjectRepository):
         self._projects: dict[UUID, Project] = {}
 
     async def save(self, project: Project) -> Project:
-        self._projects[project.id] = project
-        return project
+        # Store a deep copy to mimic DB isolation
+        self._projects[project.id] = copy.deepcopy(project)
+        return copy.deepcopy(project)
 
     async def get(self, project_id: UUID) -> Optional[Project]:
-        return self._projects.get(project_id)
+        project = self._projects.get(project_id)
+        if project:
+            return copy.deepcopy(project)
+        return None
 
     async def list_all(self) -> List[Project]:
-        return list(self._projects.values())
+        return [copy.deepcopy(p) for p in self._projects.values()]
 
 
 class InMemoryDraftRepository(DraftRepository):
@@ -92,17 +97,31 @@ class InMemoryDraftRepository(DraftRepository):
         self._drafts: dict[UUID, Draft] = {}
 
     async def save(self, draft: Draft) -> Draft:
-        self._drafts[draft.id] = draft
-        return draft
+        # Simulate Unique Constraint (project_id, version_number)
+        for existing in self._drafts.values():
+            if existing.project_id == draft.project_id and existing.version_number == draft.version_number:
+                if existing.id != draft.id:
+                    # Raise an exception similar to what SQL would raise (IntegrityError)
+                    raise ValueError(
+                        f"Unique constraint violation: Draft {draft.version_number} "
+                        f"already exists for Project {draft.project_id}"
+                    )
+
+        self._drafts[draft.id] = copy.deepcopy(draft)
+        return copy.deepcopy(draft)
 
     async def get(self, draft_id: UUID) -> Optional[Draft]:
-        return self._drafts.get(draft_id)
+        draft = self._drafts.get(draft_id)
+        if draft:
+            return copy.deepcopy(draft)
+        return None
 
     async def list_by_project(self, project_id: UUID) -> List[Draft]:
-        return sorted(
+        drafts = sorted(
             [d for d in self._drafts.values() if d.project_id == project_id],
             key=lambda d: d.version_number,
         )
+        return [copy.deepcopy(d) for d in drafts]
 
     async def get_latest_version(self, project_id: UUID) -> Optional[int]:
         drafts = await self.list_by_project(project_id)
