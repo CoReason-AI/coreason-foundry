@@ -22,17 +22,17 @@ class ProjectRepository(ABC):
     """
 
     @abstractmethod
-    def save(self, project: Project) -> Project:
+    async def save(self, project: Project) -> Project:
         """Saves a project."""
         pass  # pragma: no cover
 
     @abstractmethod
-    def get(self, project_id: UUID) -> Optional[Project]:
+    async def get(self, project_id: UUID) -> Optional[Project]:
         """Retrieves a project by ID."""
         pass  # pragma: no cover
 
     @abstractmethod
-    def list_all(self) -> List[Project]:
+    async def list_all(self) -> List[Project]:
         """Lists all projects."""
         pass  # pragma: no cover
 
@@ -45,14 +45,14 @@ class InMemoryProjectRepository(ProjectRepository):
     def __init__(self) -> None:
         self._projects: dict[UUID, Project] = {}
 
-    def save(self, project: Project) -> Project:
+    async def save(self, project: Project) -> Project:
         self._projects[project.id] = project
         return project
 
-    def get(self, project_id: UUID) -> Optional[Project]:
+    async def get(self, project_id: UUID) -> Optional[Project]:
         return self._projects.get(project_id)
 
-    def list_all(self) -> List[Project]:
+    async def list_all(self) -> List[Project]:
         return list(self._projects.values())
 
 
@@ -64,17 +64,17 @@ class ProjectManager:
     def __init__(self, repository: ProjectRepository) -> None:
         self.repository = repository
 
-    def create_project(self, name: str) -> Project:
+    async def create_project(self, name: str) -> Project:
         """Creates a new project container."""
         project = Project(name=name)
-        self.repository.save(project)
+        await self.repository.save(project)
         logger.info(f"Created project: {project.name} ({project.id})")
         return project
 
-    def get_project(self, project_id: UUID) -> Optional[Project]:
+    async def get_project(self, project_id: UUID) -> Optional[Project]:
         """Retrieves a project by ID."""
-        return self.repository.get(project_id)
+        return await self.repository.get(project_id)
 
-    def list_projects(self) -> List[Project]:
+    async def list_projects(self) -> List[Project]:
         """Lists all available projects."""
-        return self.repository.list_all()
+        return await self.repository.list_all()

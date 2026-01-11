@@ -10,14 +10,17 @@
 
 from uuid import uuid4
 
+import pytest
+
 from coreason_foundry.managers import InMemoryProjectRepository, ProjectManager
 
 
-def test_create_project() -> None:
+@pytest.mark.asyncio
+async def test_create_project() -> None:
     repo = InMemoryProjectRepository()
     manager = ProjectManager(repo)
 
-    project = manager.create_project("My Agent")
+    project = await manager.create_project("My Agent")
 
     assert project.name == "My Agent"
     assert project.id is not None
@@ -25,32 +28,35 @@ def test_create_project() -> None:
     assert project.current_draft_id is None
 
 
-def test_get_project() -> None:
+@pytest.mark.asyncio
+async def test_get_project() -> None:
     repo = InMemoryProjectRepository()
     manager = ProjectManager(repo)
 
-    project = manager.create_project("Test Agent")
-    retrieved = manager.get_project(project.id)
+    project = await manager.create_project("Test Agent")
+    retrieved = await manager.get_project(project.id)
 
     assert retrieved == project
     assert retrieved.name == "Test Agent"
 
 
-def test_get_non_existent_project() -> None:
+@pytest.mark.asyncio
+async def test_get_non_existent_project() -> None:
     repo = InMemoryProjectRepository()
     manager = ProjectManager(repo)
 
-    assert manager.get_project(uuid4()) is None
+    assert await manager.get_project(uuid4()) is None
 
 
-def test_list_projects() -> None:
+@pytest.mark.asyncio
+async def test_list_projects() -> None:
     repo = InMemoryProjectRepository()
     manager = ProjectManager(repo)
 
-    p1 = manager.create_project("A")
-    p2 = manager.create_project("B")
+    p1 = await manager.create_project("A")
+    p2 = await manager.create_project("B")
 
-    projects = manager.list_projects()
+    projects = await manager.list_projects()
     assert len(projects) == 2
     assert p1 in projects
     assert p2 in projects
