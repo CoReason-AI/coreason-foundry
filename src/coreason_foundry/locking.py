@@ -64,7 +64,7 @@ class RedisLockRegistry(LockRegistry):
         end
         """
 
-        result = await self.redis.eval(script, 1, key, str(user_id))  # type: ignore
+        result = await self.redis.eval(script, 1, key, str(user_id))
 
         if result == 1:
             logger.info(f"Lock released: {key} by {user_id}")
