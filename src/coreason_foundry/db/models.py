@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from coreason_foundry.db.base import Base
@@ -37,6 +37,7 @@ class DraftORM(Base):
     """
 
     __tablename__ = "drafts"
+    __table_args__ = (UniqueConstraint("project_id", "version_number", name="uq_draft_project_version"),)
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), nullable=False, index=True)

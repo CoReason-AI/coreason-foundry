@@ -31,6 +31,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"]),
+        sa.UniqueConstraint("project_id", "version_number", name="uq_draft_project_version"),
     )
     op.create_index(op.f("ix_drafts_project_id"), "drafts", ["project_id"], unique=False)
 
