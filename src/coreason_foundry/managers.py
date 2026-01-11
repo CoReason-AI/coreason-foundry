@@ -9,6 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 import copy
+import difflib
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -245,3 +246,38 @@ class DraftManager:
 
         logger.info(f"Created Draft v{new_version} for Project {project_id}")
         return saved_draft
+
+    async def compare_versions(self, draft_id_a: UUID, draft_id_b: UUID) -> str:
+        """
+        Compares two drafts and returns a unified diff of their prompt text.
+
+        Args:
+            draft_id_a: The ID of the first draft (base).
+            draft_id_b: The ID of the second draft (target).
+
+        Returns:
+            A string containing the unified diff.
+
+        Raises:
+            ValueError: If drafts are not found or belong to different projects.
+        """
+        draft_a = await self.draft_repo.get(draft_id_a)
+        draft_b = await self.draft_repo.get(draft_id_b)
+
+        if not draft_a:
+            raise ValueError(f"Draft {draft_id_a} not found.")
+        if not draft_b:
+            raise ValueError(f"Draft {draft_id_b} not found.")
+
+        if draft_a.project_id != draft_b.project_id:
+            raise ValueError("Cannot compare drafts from different projects.")
+
+        # difflib.unified_diff expects lists of strings
+        diff = difflib.unified_diff(
+            draft_a.prompt_text.splitlines(keepends=True),
+            draft_b.prompt_text.splitlines(keepends=True),
+            fromfile=f"Draft v{draft_a.version_number}",
+            tofile=f"Draft v{draft_b.version_number}",
+        )
+
+        return "".join(diff)
