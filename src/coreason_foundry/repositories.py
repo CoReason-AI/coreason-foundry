@@ -90,6 +90,7 @@ class SqlAlchemyDraftRepository(DraftRepository):
             version_number=draft.version_number,
             prompt_text=draft.prompt_text,
             model_configuration=draft.model_configuration,
+            scratchpad=draft.scratchpad,
             author_id=draft.author_id,
             created_at=draft.created_at,
         )
@@ -102,6 +103,7 @@ class SqlAlchemyDraftRepository(DraftRepository):
             version_number=merged_orm.version_number,
             prompt_text=merged_orm.prompt_text,
             model_configuration=merged_orm.model_configuration,
+            scratchpad=merged_orm.scratchpad,
             author_id=merged_orm.author_id,
             created_at=merged_orm.created_at,
         )
@@ -117,6 +119,7 @@ class SqlAlchemyDraftRepository(DraftRepository):
             version_number=draft_orm.version_number,
             prompt_text=draft_orm.prompt_text,
             model_configuration=draft_orm.model_configuration,
+            scratchpad=draft_orm.scratchpad,
             author_id=draft_orm.author_id,
             created_at=draft_orm.created_at,
         )
@@ -133,6 +136,7 @@ class SqlAlchemyDraftRepository(DraftRepository):
                 version_number=d.version_number,
                 prompt_text=d.prompt_text,
                 model_configuration=d.model_configuration,
+                scratchpad=d.scratchpad,
                 author_id=d.author_id,
                 created_at=d.created_at,
             )
