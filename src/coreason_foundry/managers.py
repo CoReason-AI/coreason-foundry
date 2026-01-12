@@ -257,6 +257,7 @@ class DraftManager:
         prompt_text: str,
         model_configuration: Dict[str, Any],
         author_id: UUID,
+        scratchpad: Optional[str] = None,
     ) -> Draft:
         """
         Creates a new draft for a project.
@@ -283,6 +284,7 @@ class DraftManager:
             version_number=new_version,
             prompt_text=prompt_text,
             model_configuration=model_configuration,
+            scratchpad=scratchpad,
             author_id=author_id,
         )
         saved_draft = await self.draft_repo.save(draft)
