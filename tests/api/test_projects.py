@@ -8,10 +8,11 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
+from typing import AsyncGenerator
+from uuid import uuid4
+
 import pytest
 from httpx import ASGITransport, AsyncClient
-from uuid import uuid4
-from typing import AsyncGenerator
 
 from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import get_project_repository
@@ -84,6 +85,7 @@ async def test_get_project_not_found(override_project_repo: InMemoryProjectRepos
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Project not found"
+
 
 @pytest.mark.asyncio
 async def test_default_dependency_injection() -> None:
