@@ -44,6 +44,7 @@ class DraftORM(Base):
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     prompt_text: Mapped[str] = mapped_column(String, nullable=False)
     model_configuration: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    scratchpad: Mapped[str | None] = mapped_column(String, nullable=True)
     author_id: Mapped[UUID] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 

@@ -38,6 +38,7 @@ class Draft(BaseModel):
     version_number: int
     prompt_text: str
     model_configuration: Dict[str, Any] = Field(description="Configuration parameters for the model")
+    scratchpad: Optional[str] = None
     author_id: UUID
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
