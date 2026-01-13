@@ -151,6 +151,13 @@ async def test_get_draft(async_client: AsyncClient, draft_repo: InMemoryDraftRep
 
 
 @pytest.mark.asyncio
+async def test_get_draft_not_found(async_client: AsyncClient) -> None:
+    random_id = uuid.uuid4()
+    response = await async_client.get(f"/drafts/{random_id}")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_compare_drafts(async_client: AsyncClient, draft_repo: InMemoryDraftRepository) -> None:
     from coreason_foundry.models import Draft
 
