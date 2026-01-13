@@ -121,6 +121,33 @@ class LockRegistry(ABC):
         pass  # pragma: no cover
 
 
+class PresenceRegistry(ABC):
+    """
+    Abstract base class for Real-Time Presence (who is online).
+    """
+
+    @abstractmethod
+    async def add_user(self, project_id: UUID, user_id: UUID) -> None:
+        """
+        Marks a user as present in a project.
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def remove_user(self, project_id: UUID, user_id: UUID) -> None:
+        """
+        Removes a user from the project's presence list.
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    async def get_present_users(self, project_id: UUID) -> List[UUID]:
+        """
+        Returns a list of user_ids currently present in the project.
+        """
+        pass  # pragma: no cover
+
+
 class InMemoryProjectRepository(ProjectRepository):
     """
     In-memory implementation of ProjectRepository.
@@ -216,6 +243,28 @@ class InMemoryCommentRepository(CommentRepository):
             del self._comments[comment_id]
             return True
         return False
+
+
+class InMemoryPresenceRegistry(PresenceRegistry):
+    """
+    In-memory implementation of PresenceRegistry.
+    """
+
+    def __init__(self) -> None:
+        # Map project_id -> Set[user_id]
+        self._presence: dict[UUID, set[UUID]] = {}
+
+    async def add_user(self, project_id: UUID, user_id: UUID) -> None:
+        if project_id not in self._presence:
+            self._presence[project_id] = set()
+        self._presence[project_id].add(user_id)
+
+    async def remove_user(self, project_id: UUID, user_id: UUID) -> None:
+        if project_id in self._presence:
+            self._presence[project_id].discard(user_id)
+
+    async def get_present_users(self, project_id: UUID) -> List[UUID]:
+        return list(self._presence.get(project_id, set()))
 
 
 class ProjectManager:
