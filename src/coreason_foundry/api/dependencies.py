@@ -14,11 +14,14 @@ from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, status
 
+from coreason_foundry.api.websockets import ConnectionManager
 from coreason_foundry.managers import (
     DraftManager,
     DraftRepository,
     InMemoryDraftRepository,
+    InMemoryPresenceRegistry,
     InMemoryProjectRepository,
+    PresenceRegistry,
     ProjectManager,
     ProjectRepository,
 )
@@ -59,6 +62,25 @@ def get_draft_repository() -> DraftRepository:
     Defaults to InMemoryDraftRepository for this iteration.
     """
     return InMemoryDraftRepository()
+
+
+@lru_cache
+def get_presence_registry() -> PresenceRegistry:
+    """
+    Returns a singleton instance of the PresenceRegistry.
+    Defaults to InMemoryPresenceRegistry for this iteration.
+    """
+    return InMemoryPresenceRegistry()
+
+
+@lru_cache
+def get_connection_manager(
+    presence_registry: Annotated[PresenceRegistry, Depends(get_presence_registry)],
+) -> ConnectionManager:
+    """
+    Returns a singleton instance of the ConnectionManager.
+    """
+    return ConnectionManager(presence_registry=presence_registry)
 
 
 def get_project_manager(

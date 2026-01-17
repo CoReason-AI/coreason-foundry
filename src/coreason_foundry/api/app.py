@@ -10,7 +10,7 @@
 
 from fastapi import FastAPI
 
-from coreason_foundry.api.routes import drafts, projects
+from coreason_foundry.api.routes import drafts, projects, websockets
 
 
 def create_app() -> FastAPI:
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
 
     app.include_router(projects.router)
     app.include_router(drafts.router)
+    app.include_router(websockets.router)
 
     return app
 
