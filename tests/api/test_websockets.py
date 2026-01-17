@@ -8,9 +8,8 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-import asyncio
 from typing import Any, Generator, Tuple
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -161,38 +160,44 @@ async def test_broadcast_exception_handling() -> None:
     await manager.broadcast(project_id, {"type": "TEST"})
 
 
-def test_route_generic_exception_handling(fresh_deps: Tuple[PresenceRegistry, ConnectionManager]) -> None:
+@pytest.mark.asyncio
+async def test_route_generic_exception_handling(fresh_deps: Tuple[PresenceRegistry, ConnectionManager]) -> None:
     """
     Test that a generic exception in the websocket loop triggers disconnect/cleanup.
-    (Synchronous test version)
     """
     _, manager = fresh_deps
     project_id = uuid4()
     user_id = uuid4()
 
     # Use patch.object to safely mock methods on the instance
-    # We use asyncio.Future to simulate async return values
 
-    f_err: asyncio.Future[None] = asyncio.Future()
-    f_err.set_exception(Exception("Something went wrong"))
+    # We use AsyncMock for async methods if available, but MagicMock returning coroutines/Futures works
+    # Using async def local functions is easiest for side effects if needed,
+    # but patch.object expects the replacement object.
 
-    f_ok: asyncio.Future[None] = asyncio.Future()
-    f_ok.set_result(None)
+    # Creating async mock functions
+    async def mock_connect(*args: Any, **kwargs: Any) -> None:
+        raise Exception("Something went wrong")
 
-    # We need to track if disconnect was called.
-    # MagicMock can track calls.
+    disconnect_called = False
 
-    mock_connect = MagicMock(return_value=f_err)
-    mock_disconnect = MagicMock(return_value=f_ok)
+    async def mock_disconnect(*args: Any, **kwargs: Any) -> None:
+        nonlocal disconnect_called
+        disconnect_called = True
 
-    with patch.object(manager, "connect", mock_connect):
-        with patch.object(manager, "disconnect", mock_disconnect):
+    # patch.object expects the new attribute value.
+    # We pass side_effect with the async function, so patch.object wraps it correctly?
+    # No, patch.object(obj, attr, side_effect=...) works if the original is replaced by a Mock.
+    # If we pass `side_effect` to `patch.object`, it creates a MagicMock with that side effect.
+
+    with patch.object(manager, "connect", side_effect=mock_connect):
+        with patch.object(manager, "disconnect", side_effect=mock_disconnect):
             client = TestClient(app)
             try:
                 with pytest.raises(WebSocketDisconnect):
                     with client.websocket_connect(f"/ws/projects/{project_id}?user_id={user_id}"):
                         pass
             except Exception:
-                pass  # Should not happen if pytest.raises catches it
+                pass
 
-    assert mock_disconnect.called
+    assert disconnect_called
