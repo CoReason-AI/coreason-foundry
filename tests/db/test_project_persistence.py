@@ -30,7 +30,7 @@ async def test_project_repository_save_and_get(db_session: AsyncSession) -> None
     )
 
     # Save
-    saved_project = await repo.save(project)
+    saved_project = await repo.add(project)
     assert saved_project.id == project_id
     assert saved_project.name == "Test Project"
     assert saved_project.created_at == project.created_at
@@ -58,11 +58,11 @@ async def test_project_repository_update(db_session: AsyncSession) -> None:
         id=project_id,
         name="Test Project",
     )
-    await repo.save(project)
+    await repo.add(project)
 
     # Update
     project.name = "Updated Project Name"
-    updated_project = await repo.save(project)
+    updated_project = await repo.update(project)
     assert updated_project.name == "Updated Project Name"
 
     # Verify Get
@@ -90,8 +90,8 @@ async def test_project_repository_list_all(db_session: AsyncSession) -> None:
     project1 = Project(id=uuid.uuid4(), name="Project A")
     project2 = Project(id=uuid.uuid4(), name="Project B")
 
-    await repo.save(project1)
-    await repo.save(project2)
+    await repo.add(project1)
+    await repo.add(project2)
 
     projects = await repo.list_all()
     # We might have other projects from other tests if the DB is shared/not cleaned.

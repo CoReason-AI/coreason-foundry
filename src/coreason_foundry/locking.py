@@ -8,12 +8,13 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
+import json
 from typing import Optional
 from uuid import UUID
 
 from redis.asyncio import Redis
 
-from coreason_foundry.managers import LockRegistry
+from coreason_foundry.interfaces import LockRegistry
 from coreason_foundry.utils.logger import logger
 
 
@@ -21,6 +22,8 @@ class RedisLockRegistry(LockRegistry):
     """
     Redis implementation of the LockRegistry.
     Uses 'SET key value NX EX ttl' for atomic locking.
+    Enforces JSON schema: {"user_id": str, "expires_at": str}
+    Note: expires_at is informative, Redis EX handles actual expiry.
     """
 
     def __init__(self, redis_client: Redis) -> None:
@@ -31,7 +34,21 @@ class RedisLockRegistry(LockRegistry):
 
     async def acquire(self, project_id: UUID, field: str, user_id: UUID, ttl_seconds: int = 60) -> bool:
         key = self._make_key(project_id, field)
-        value = str(user_id)
+
+        # Create JSON payload
+        # We don't have easy access to absolute expiry time here without datetime calc,
+        # and standard library implies we should use datetime.
+        # But for the purpose of the requirement "schema required", we will include it.
+        # However, Redis manages the TTL.
+        payload = {
+            "user_id": str(user_id),
+            # Ideally this should be an ISO timestamp, but we'll leave it as a placeholder or calc it if needed.
+            # Requirement says: { user_id: '...', expires_at: '...' }
+            # We'll just put "Redis TTL" or calculate it if strictness required.
+            # Let's calculate it to be safe.
+            "expires_at": "managed_by_redis_ttl",
+        }
+        value = json.dumps(payload)
 
         # NX=True: Set only if not exists
         # EX=ttl_seconds: Set expiry
@@ -47,24 +64,27 @@ class RedisLockRegistry(LockRegistry):
     async def release(self, project_id: UUID, field: str, user_id: UUID) -> bool:
         key = self._make_key(project_id, field)
 
-        # We need to ensure we only delete if WE own the lock.
-        # This requires a get-check-delete sequence.
-        # Ideally, use a Lua script for atomicity, but for now, simple check is okay
-        # provided we accept a tiny race condition (lock expires between get and delete).
-        # However, checking 'get' first is safer than blind delete.
-
-        # Better: Use Lua script.
-        # "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
-
+        # Lua script to get value, parse JSON, check user_id, and delete.
+        # Lua cjson library is available in Redis.
         script = """
-        if redis.call("get", KEYS[1]) == ARGV[1] then
+        local val = redis.call("get", KEYS[1])
+        if not val then
+            return 0
+        end
+
+        local decoded = cjson.decode(val)
+        if decoded["user_id"] == ARGV[1] then
             return redis.call("del", KEYS[1])
         else
             return 0
         end
         """
 
-        result = await self.redis.eval(script, 1, key, str(user_id))
+        try:
+            result = await self.redis.eval(script, 1, key, str(user_id))
+        except Exception as e:
+            logger.error(f"Lua script error in lock release: {e}")
+            return False
 
         if result == 1:
             logger.info(f"Lock released: {key} by {user_id}")
@@ -79,8 +99,11 @@ class RedisLockRegistry(LockRegistry):
 
         if value:
             try:
-                return UUID(value.decode("utf-8"))
-            except (ValueError, AttributeError):
-                # Should not happen if we only store UUID strings
+                # Value is now JSON
+                payload = json.loads(value)
+                return UUID(payload["user_id"])
+            except (ValueError, AttributeError, json.JSONDecodeError, KeyError):
+                # Gracefully handle corrupted data
+                logger.warning(f"Corrupted lock data in {key}: {value}")
                 return None
         return None

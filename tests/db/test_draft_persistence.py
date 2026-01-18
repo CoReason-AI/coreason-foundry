@@ -42,7 +42,7 @@ async def test_draft_repository_save_and_get(db_session: AsyncSession) -> None:
     )
 
     # Save
-    saved_draft = await repo.save(draft)
+    saved_draft = await repo.add(draft)
     assert saved_draft.id == draft_id
     assert saved_draft.version_number == 1
     assert saved_draft.model_configuration == {"temperature": 0.7}
@@ -87,8 +87,8 @@ async def test_draft_repository_list_by_project(db_session: AsyncSession) -> Non
         author_id=uuid.uuid4(),
     )
 
-    await repo.save(draft1)
-    await repo.save(draft2)
+    await repo.add(draft1)
+    await repo.add(draft2)
 
     # List
     drafts = await repo.list_by_project(project_id)
@@ -120,7 +120,7 @@ async def test_draft_repository_get_latest_version(db_session: AsyncSession) -> 
         model_configuration={},
         author_id=uuid.uuid4(),
     )
-    await repo.save(draft1)
+    await repo.add(draft1)
 
     latest = await repo.get_latest_version(project_id)
     assert latest == 1
@@ -134,7 +134,7 @@ async def test_draft_repository_get_latest_version(db_session: AsyncSession) -> 
         model_configuration={},
         author_id=uuid.uuid4(),
     )
-    await repo.save(draft2)
+    await repo.add(draft2)
 
     latest = await repo.get_latest_version(project_id)
     assert latest == 2
