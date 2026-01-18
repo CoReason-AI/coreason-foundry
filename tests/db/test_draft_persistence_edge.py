@@ -38,7 +38,7 @@ async def test_unique_version_constraint(db_session: AsyncSession) -> None:
         model_configuration={},
         author_id=uuid.uuid4(),
     )
-    await repo.save(draft1)
+    await repo.add(draft1)
 
     # Try Save Duplicate V1 (Different ID)
     draft1_duplicate = Draft(
@@ -51,7 +51,7 @@ async def test_unique_version_constraint(db_session: AsyncSession) -> None:
     )
 
     with pytest.raises(IntegrityError):
-        await repo.save(draft1_duplicate)
+        await repo.add(draft1_duplicate)
 
 
 @pytest.mark.asyncio
@@ -69,7 +69,7 @@ async def test_foreign_key_violation(db_session: AsyncSession) -> None:
     )
 
     with pytest.raises(IntegrityError):
-        await repo.save(draft_orphan)
+        await repo.add(draft_orphan)
 
 
 @pytest.mark.asyncio
@@ -98,7 +98,7 @@ async def test_complex_json_serialization(db_session: AsyncSession) -> None:
         author_id=uuid.uuid4(),
     )
 
-    saved = await repo.save(draft)
+    saved = await repo.add(draft)
 
     # Fetch back
     # We create a new session or clear identity map to ensure we fetch from DB?
@@ -132,7 +132,7 @@ async def test_large_prompt_text(db_session: AsyncSession) -> None:
         author_id=uuid.uuid4(),
     )
 
-    await repo.save(draft)
+    await repo.add(draft)
 
     fetched = await repo.get(draft.id)
     assert fetched is not None

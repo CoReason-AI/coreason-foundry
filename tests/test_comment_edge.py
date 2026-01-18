@@ -15,7 +15,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from coreason_foundry.managers import InMemoryCommentRepository
+from coreason_foundry.memory import InMemoryCommentRepository
 from coreason_foundry.models import Comment, Draft, Project
 from coreason_foundry.repositories import (
     SqlAlchemyCommentRepository,
@@ -60,9 +60,9 @@ async def test_in_memory_ordering_precision() -> None:
     c3 = Comment(draft_id=draft_id, target_field="f1", text="Third", author_id=uuid4())
 
     # Save out of order
-    await repo.save(c2)
-    await repo.save(c3)
-    await repo.save(c1)
+    await repo.add(c2)
+    await repo.add(c3)
+    await repo.add(c1)
 
     comments = await repo.list_by_draft(draft_id)
     assert len(comments) == 3
@@ -86,7 +86,7 @@ async def test_sql_orphan_comment_integrity_error(db_session: AsyncSession) -> N
     orphan_comment = Comment(draft_id=uuid4(), target_field="prompt_text", text="I have no parent", author_id=uuid4())
 
     with pytest.raises(IntegrityError):
-        await repo.save(orphan_comment)
+        await repo.add(orphan_comment)
 
 
 @pytest.mark.asyncio
@@ -98,17 +98,17 @@ async def test_sql_unicode_roundtrip(db_session: AsyncSession) -> None:
     comment_repo = SqlAlchemyCommentRepository(db_session)
 
     project = Project(name="Unicode Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     draft = Draft(
         project_id=project.id, version_number=1, prompt_text="base", model_configuration={}, author_id=uuid4()
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     # Save Unicode Comment
     special_text = "🚀 Launching sequence: 3... 2... 1... 🛑 Abort!"
     comment = Comment(draft_id=draft.id, target_field="prompt_text", text=special_text, author_id=uuid4())
-    await comment_repo.save(comment)
+    await comment_repo.add(comment)
 
     # Fetch
     fetched = await comment_repo.get(comment.id)

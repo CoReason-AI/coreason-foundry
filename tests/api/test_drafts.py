@@ -19,8 +19,13 @@ from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import (
     get_draft_repository,
     get_project_repository,
+    get_unit_of_work,
 )
-from coreason_foundry.managers import InMemoryDraftRepository, InMemoryProjectRepository
+from coreason_foundry.memory import (
+    InMemoryDraftRepository,
+    InMemoryProjectRepository,
+    InMemoryUnitOfWork,
+)
 
 
 @pytest_asyncio.fixture
@@ -30,21 +35,32 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-def project_repo() -> InMemoryProjectRepository:
-    return InMemoryProjectRepository()
+def uow() -> InMemoryUnitOfWork:
+    return InMemoryUnitOfWork()
 
 
 @pytest.fixture
-def draft_repo() -> InMemoryDraftRepository:
-    return InMemoryDraftRepository()
+def project_repo(uow: InMemoryUnitOfWork) -> InMemoryProjectRepository:
+    return uow.projects  # type: ignore
+
+
+@pytest.fixture
+def draft_repo(uow: InMemoryUnitOfWork) -> InMemoryDraftRepository:
+    return uow.drafts  # type: ignore
 
 
 @pytest.fixture(autouse=True)
 def override_dependencies(
-    project_repo: InMemoryProjectRepository, draft_repo: InMemoryDraftRepository
+    uow: InMemoryUnitOfWork,
 ) -> Generator[None, None, None]:
-    app.dependency_overrides[get_project_repository] = lambda: project_repo
-    app.dependency_overrides[get_draft_repository] = lambda: draft_repo
+    app.dependency_overrides[get_unit_of_work] = lambda: uow
+    # We don't strictly need to override get_project/draft_repo if they resolve from get_unit_of_work,
+    # but overriding them is safer if logic changes.
+    # Actually, in api/dependencies.py, get_project_repository depends on get_unit_of_work.
+    # So if we override get_unit_of_work, the default get_project_repository will use our overridden UoW.
+    # However, forcing it ensures consistency.
+    app.dependency_overrides[get_project_repository] = lambda: uow.projects
+    app.dependency_overrides[get_draft_repository] = lambda: uow.drafts
     yield
     app.dependency_overrides.clear()
 
@@ -55,7 +71,7 @@ async def test_create_draft(async_client: AsyncClient, project_repo: InMemoryPro
     from coreason_foundry.models import Project
 
     project = Project(name="Test Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     user_id = str(uuid.uuid4())
     payload = {
@@ -103,7 +119,7 @@ async def test_list_drafts(
     from coreason_foundry.models import Draft, Project
 
     project = Project(name="Test Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     author_id = uuid.uuid4()
     draft1 = Draft(
@@ -120,8 +136,8 @@ async def test_list_drafts(
         model_configuration={},
         author_id=author_id,
     )
-    await draft_repo.save(draft1)
-    await draft_repo.save(draft2)
+    await draft_repo.add(draft1)
+    await draft_repo.add(draft2)
 
     response = await async_client.get(f"/projects/{project.id}/drafts")
     assert response.status_code == 200
@@ -142,7 +158,7 @@ async def test_get_draft(async_client: AsyncClient, draft_repo: InMemoryDraftRep
         model_configuration={},
         author_id=uuid.uuid4(),
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     response = await async_client.get(f"/drafts/{draft.id}")
     assert response.status_code == 200
@@ -178,8 +194,8 @@ async def test_compare_drafts(async_client: AsyncClient, draft_repo: InMemoryDra
         model_configuration={},
         author_id=author_id,
     )
-    await draft_repo.save(draft1)
-    await draft_repo.save(draft2)
+    await draft_repo.add(draft1)
+    await draft_repo.add(draft2)
 
     response = await async_client.get(
         "/drafts/compare", params={"base_id": str(draft1.id), "target_id": str(draft2.id)}

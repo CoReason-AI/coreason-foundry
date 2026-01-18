@@ -12,7 +12,8 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import InMemoryProjectRepository, ProjectManager
+from coreason_foundry.managers import ProjectManager
+from coreason_foundry.memory import InMemoryProjectRepository
 
 
 @pytest.mark.asyncio
@@ -89,7 +90,7 @@ async def test_workflow_state_update() -> None:
     # 3. Persist (Explicitly saving via repo, as manager update method doesn't exist yet)
     # Note: With InMemoryRepo, the object might be shared reference, but we call save to be explicit
     # about the intent of "persisting" changes in a real DB scenario.
-    await repo.save(project)
+    await repo.update(project)
 
     # 4. Retrieve fresh instance (conceptually)
     # In a real DB, we would refetch. Here we fetch via manager.

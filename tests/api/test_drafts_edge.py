@@ -19,8 +19,13 @@ from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import (
     get_draft_repository,
     get_project_repository,
+    get_unit_of_work,
 )
-from coreason_foundry.managers import InMemoryDraftRepository, InMemoryProjectRepository
+from coreason_foundry.memory import (
+    InMemoryDraftRepository,
+    InMemoryProjectRepository,
+    InMemoryUnitOfWork,
+)
 
 
 @pytest_asyncio.fixture
@@ -30,21 +35,27 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-def project_repo() -> InMemoryProjectRepository:
-    return InMemoryProjectRepository()
+def uow() -> InMemoryUnitOfWork:
+    return InMemoryUnitOfWork()
 
 
 @pytest.fixture
-def draft_repo() -> InMemoryDraftRepository:
-    return InMemoryDraftRepository()
+def project_repo(uow: InMemoryUnitOfWork) -> InMemoryProjectRepository:
+    return uow.projects  # type: ignore
+
+
+@pytest.fixture
+def draft_repo(uow: InMemoryUnitOfWork) -> InMemoryDraftRepository:
+    return uow.drafts  # type: ignore
 
 
 @pytest.fixture(autouse=True)
 def override_dependencies(
-    project_repo: InMemoryProjectRepository, draft_repo: InMemoryDraftRepository
+    uow: InMemoryUnitOfWork,
 ) -> Generator[None, None, None]:
-    app.dependency_overrides[get_project_repository] = lambda: project_repo
-    app.dependency_overrides[get_draft_repository] = lambda: draft_repo
+    app.dependency_overrides[get_unit_of_work] = lambda: uow
+    app.dependency_overrides[get_project_repository] = lambda: uow.projects
+    app.dependency_overrides[get_draft_repository] = lambda: uow.drafts
     yield
     app.dependency_overrides.clear()
 
@@ -74,8 +85,8 @@ async def test_compare_drafts_different_projects(
         author_id=author_id,
     )
 
-    await draft_repo.save(draft1)
-    await draft_repo.save(draft2)
+    await draft_repo.add(draft1)
+    await draft_repo.add(draft2)
 
     response = await async_client.get(
         "/drafts/compare", params={"base_id": str(draft1.id), "target_id": str(draft2.id)}
@@ -96,7 +107,7 @@ async def test_compare_draft_self(async_client: AsyncClient, draft_repo: InMemor
         model_configuration={},
         author_id=uuid.uuid4(),
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     response = await async_client.get("/drafts/compare", params={"base_id": str(draft.id), "target_id": str(draft.id)})
 
@@ -114,7 +125,7 @@ async def test_draft_unicode_support(async_client: AsyncClient, project_repo: In
     from coreason_foundry.models import Project
 
     project = Project(name="Unicode Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     user_id = str(uuid.uuid4())
     # Emoji: 🚀, Japanese: こんにちは, Special: \n\t
@@ -144,7 +155,7 @@ async def test_sequential_versioning(async_client: AsyncClient, project_repo: In
     from coreason_foundry.models import Project
 
     project = Project(name="Versioning Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     user_id = str(uuid.uuid4())
     headers = {"X-User-ID": user_id}

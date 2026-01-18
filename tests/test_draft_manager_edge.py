@@ -13,12 +13,8 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import (
-    DraftManager,
-    InMemoryDraftRepository,
-    InMemoryProjectRepository,
-    ProjectManager,
-)
+from coreason_foundry.managers import DraftManager, ProjectManager
+from coreason_foundry.memory import InMemoryUnitOfWork
 from coreason_foundry.models import Draft, Project
 
 
@@ -28,10 +24,10 @@ async def test_create_draft_version_gaps() -> None:
     Verifies that create_draft correctly increments from the highest existing version number,
     even if there are gaps (e.g., v1, v2, v10 -> v11).
     """
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
     project_manager = ProjectManager(project_repo)
-    draft_manager = DraftManager(project_repo, draft_repo)
+    draft_manager = DraftManager(uow)
 
     project = await project_manager.create_project("Gap Project")
     author_id = uuid4()
@@ -44,7 +40,7 @@ async def test_create_draft_version_gaps() -> None:
         model_configuration={},
         author_id=author_id,
     )
-    await draft_repo.save(draft_v10)
+    await uow.drafts.add(draft_v10)
 
     # Create next draft via manager
     draft_next = await draft_manager.create_draft(
@@ -70,10 +66,10 @@ async def test_create_draft_concurrent_race_condition() -> None:
     Since they both read the same 'latest' version (e.g., 0), they both try to save version 1.
     The database (simulated by InMemoryDraftRepository) should enforce uniqueness and reject one.
     """
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
     project_manager = ProjectManager(project_repo)
-    draft_manager = DraftManager(project_repo, draft_repo)
+    draft_manager = DraftManager(uow)
 
     project = await project_manager.create_project("Race Project")
     author_id = uuid4()
@@ -116,7 +112,8 @@ async def test_duplicate_version_constraint() -> None:
     """
     Explicitly tests the unique constraint enforcement in the repository.
     """
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    draft_repo = uow.drafts
     project_id = uuid4()
     author_id = uuid4()
 
@@ -127,7 +124,7 @@ async def test_duplicate_version_constraint() -> None:
         model_configuration={},
         author_id=author_id,
     )
-    await draft_repo.save(draft1)
+    await draft_repo.add(draft1)
 
     draft_duplicate = Draft(
         project_id=project_id,
@@ -138,7 +135,7 @@ async def test_duplicate_version_constraint() -> None:
     )
 
     with pytest.raises(ValueError, match="Unique constraint violation"):
-        await draft_repo.save(draft_duplicate)
+        await draft_repo.add(draft_duplicate)
 
 
 @pytest.mark.asyncio
@@ -146,10 +143,10 @@ async def test_create_draft_empty_inputs() -> None:
     """
     Tests that empty prompt_text and model_configuration are accepted.
     """
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
     project_manager = ProjectManager(project_repo)
-    draft_manager = DraftManager(project_repo, draft_repo)
+    draft_manager = DraftManager(uow)
 
     project = await project_manager.create_project("Empty Inputs Project")
     assert project.id is not None
@@ -176,25 +173,26 @@ async def test_atomic_update_failure_scenario() -> None:
     Now that repositories use deepcopy, we can assert that the repository state
     is unaffected by local mutations if save fails.
     """
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
+    draft_repo = uow.drafts
     project_manager = ProjectManager(project_repo)
-    draft_manager = DraftManager(project_repo, draft_repo)
+    draft_manager = DraftManager(uow)
 
     project = await project_manager.create_project("Broken Project")
     original_project_state = await project_repo.get(project.id)
     assert original_project_state is not None
     assert original_project_state.current_draft_id is None
 
-    # Mock project_repo.save to fail
-    original_save = project_repo.save
+    # Mock project_repo.update to fail
+    original_update = project_repo.update
 
-    async def failing_save(p: Project) -> Project:
+    async def failing_update(p: Project) -> Project:
         if p.id == project.id and p.current_draft_id is not None:
             raise RuntimeError("DB Connection Lost")
-        return await original_save(p)
+        return await original_update(p)
 
-    project_repo.save = failing_save  # type: ignore
+    project_repo.update = failing_update  # type: ignore
 
     with pytest.raises(RuntimeError, match="DB Connection Lost"):
         await draft_manager.create_draft(

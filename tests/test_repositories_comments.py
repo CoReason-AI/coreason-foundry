@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from coreason_foundry.managers import InMemoryCommentRepository
+from coreason_foundry.memory import InMemoryCommentRepository
 from coreason_foundry.models import Comment
 from coreason_foundry.repositories import SqlAlchemyCommentRepository
 
@@ -34,7 +34,7 @@ async def test_in_memory_comment_repository() -> None:
     comment = make_comment()
 
     # Save
-    saved = await repo.save(comment)
+    saved = await repo.add(comment)
     assert saved == comment
     assert saved is not comment  # Deep copy check
 
@@ -44,11 +44,11 @@ async def test_in_memory_comment_repository() -> None:
 
     # List
     comment2 = Comment(draft_id=comment.draft_id, target_field="prompt", text="Another one", author_id=uuid4())
-    await repo.save(comment2)
+    await repo.add(comment2)
 
     # Add a comment for a different draft to ensure filtering works
     other_draft_comment = Comment(draft_id=uuid4(), target_field="prompt", text="Other draft", author_id=uuid4())
-    await repo.save(other_draft_comment)
+    await repo.add(other_draft_comment)
 
     listing = await repo.list_by_draft(comment.draft_id)
     assert len(listing) == 2
@@ -77,16 +77,16 @@ async def test_sqlalchemy_comment_repository(db_session: AsyncSession) -> None:
     draft_repo = SqlAlchemyDraftRepository(db_session)
 
     project = Project(name="Test Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     draft = Draft(project_id=project.id, version_number=1, prompt_text="foo", model_configuration={}, author_id=uuid4())
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     # Test Comment Repo
     comment = Comment(draft_id=draft.id, target_field="prompt_text", text="SQL Test Comment", author_id=uuid4())
 
     # Save
-    saved = await repo.save(comment)
+    saved = await repo.add(comment)
     assert saved.id == comment.id
 
     # Get

@@ -40,7 +40,7 @@ async def test_orphan_comment_rejection(db_session: AsyncSession) -> None:
     orphan_comment = Comment(draft_id=uuid4(), target_field="prompt_text", text="I am an orphan", author_id=uuid4())
 
     with pytest.raises(IntegrityError):
-        await repo.save(orphan_comment)
+        await repo.add(orphan_comment)
 
 
 @pytest.mark.asyncio
@@ -55,15 +55,15 @@ async def test_referential_integrity_on_parent_delete(db_session: AsyncSession) 
 
     # 1. Create Hierarchy
     project = Project(name="Parent Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     draft = Draft(
         project_id=project.id, version_number=1, prompt_text="Base", model_configuration={}, author_id=uuid4()
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     comment = Comment(draft_id=draft.id, target_field="prompt_text", text="Child Comment", author_id=uuid4())
-    await comment_repo.save(comment)
+    await comment_repo.add(comment)
 
     # 2. Attempt to delete the Draft
     # Since DraftRepository doesn't expose delete, we do it via session/ORM directly for this test
@@ -115,7 +115,7 @@ async def test_concurrent_comment_insertions() -> None:
         draft_repo = SqlAlchemyDraftRepository(session)
 
         project = Project(name="Concurrent Project")
-        await project_repo.save(project)
+        await project_repo.add(project)
 
         draft = Draft(
             id=draft_id,
@@ -125,7 +125,7 @@ async def test_concurrent_comment_insertions() -> None:
             model_configuration={},
             author_id=uuid4(),
         )
-        await draft_repo.save(draft)
+        await draft_repo.add(draft)
         await session.commit()
 
     # 3. Define Concurrent Worker
@@ -135,7 +135,7 @@ async def test_concurrent_comment_insertions() -> None:
             comment = Comment(
                 draft_id=draft_id, target_field="prompt_text", text=f"Concurrent Comment {idx}", author_id=uuid4()
             )
-            await repo.save(comment)
+            await repo.add(comment)
             await session.commit()
 
     # 4. Run Concurrent Tasks
@@ -174,25 +174,25 @@ async def test_transaction_rollback_atomicity(db_session: AsyncSession) -> None:
 
     # Setup parent
     project = Project(name="Atomicity Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
     draft = Draft(
         project_id=project.id, version_number=1, prompt_text="Base", model_configuration={}, author_id=uuid4()
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     # We want to test atomicity within a single transaction scope.
     # The repositories use the passed `db_session`.
 
     # 1. Save a VALID comment
     valid_comment = Comment(draft_id=draft.id, target_field="prompt", text="Valid Comment", author_id=uuid4())
-    await comment_repo.save(valid_comment)
+    await comment_repo.add(valid_comment)
 
     # 2. Try to save an INVALID comment (orphan) in the SAME session
     # Note: `save` performs a flush. The error should happen here.
     orphan_comment = Comment(draft_id=uuid4(), target_field="prompt", text="Invalid Comment", author_id=uuid4())
 
     with pytest.raises(IntegrityError):
-        await comment_repo.save(orphan_comment)
+        await comment_repo.add(orphan_comment)
 
     # 3. Rollback the session (standard procedure after exception)
     await db_session.rollback()
@@ -215,18 +215,18 @@ async def test_persistence_large_payload(db_session: AsyncSession) -> None:
 
     # Setup
     project = Project(name="Large Payload Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
     draft = Draft(
         project_id=project.id, version_number=1, prompt_text="Base", model_configuration={}, author_id=uuid4()
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     # Create 1MB text payload
     large_text = "x" * (1024 * 1024)  # 1MB
 
     comment = Comment(draft_id=draft.id, target_field="prompt", text=large_text, author_id=uuid4())
 
-    await comment_repo.save(comment)
+    await comment_repo.add(comment)
 
     # Fetch and verify
     fetched = await comment_repo.get(comment.id)

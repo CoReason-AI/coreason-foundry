@@ -29,7 +29,7 @@ async def test_draft_unique_version_constraint(db_session: AsyncSession) -> None
 
     # Setup Project
     project = Project(name="Constraint Test Project")
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     # Save Draft V1
     draft1 = Draft(
@@ -39,7 +39,7 @@ async def test_draft_unique_version_constraint(db_session: AsyncSession) -> None
         model_configuration={},
         author_id=uuid.uuid4(),
     )
-    await draft_repo.save(draft1)
+    await draft_repo.add(draft1)
 
     # Attempt to Save Draft V1 again (different ID, same version)
     draft_duplicate = Draft(
@@ -51,7 +51,7 @@ async def test_draft_unique_version_constraint(db_session: AsyncSession) -> None
     )
 
     with pytest.raises(IntegrityError):
-        await draft_repo.save(draft_duplicate)
+        await draft_repo.add(draft_duplicate)
 
 
 @pytest.mark.asyncio
@@ -72,7 +72,7 @@ async def test_draft_foreign_key_violation(db_session: AsyncSession) -> None:
     )
 
     with pytest.raises(IntegrityError):
-        await draft_repo.save(draft)
+        await draft_repo.add(draft)
 
 
 @pytest.mark.asyncio
@@ -87,7 +87,7 @@ async def test_data_fidelity_unicode_and_json(db_session: AsyncSession) -> None:
     # 1. Project with Unicode Name
     project_name = "Project 🚀 (プロジェクタ)"
     project = Project(name=project_name)
-    await project_repo.save(project)
+    await project_repo.add(project)
 
     fetched_project = await project_repo.get(project.id)
     assert fetched_project is not None
@@ -112,7 +112,7 @@ async def test_data_fidelity_unicode_and_json(db_session: AsyncSession) -> None:
         model_configuration=complex_config,
         author_id=uuid.uuid4(),
     )
-    await draft_repo.save(draft)
+    await draft_repo.add(draft)
 
     fetched_draft = await draft_repo.get(draft.id)
     assert fetched_draft is not None

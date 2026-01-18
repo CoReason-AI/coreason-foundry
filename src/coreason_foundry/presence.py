@@ -13,7 +13,7 @@ from uuid import UUID
 
 from redis.asyncio import Redis
 
-from coreason_foundry.managers import PresenceRegistry
+from coreason_foundry.interfaces import PresenceRegistry
 from coreason_foundry.utils.logger import logger
 
 
