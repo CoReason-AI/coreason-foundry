@@ -63,7 +63,7 @@ class GenericInMemoryRepository(Generic[T]):
         return None
 
     async def _list_all(self) -> List[T]:
-        return [copy.deepcopy(e) for e in self._storage.values()]  # type: ignore
+        return [copy.deepcopy(e) for e in self._storage.values()]
 
     async def _delete(self, entity_id: UUID) -> bool:
         if entity_id in self._storage:
