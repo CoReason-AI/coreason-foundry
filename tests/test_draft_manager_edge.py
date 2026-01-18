@@ -26,7 +26,6 @@ async def test_create_draft_version_gaps() -> None:
     """
     uow = InMemoryUnitOfWork()
     project_repo = uow.projects
-    draft_repo = uow.drafts
     project_manager = ProjectManager(project_repo)
     draft_manager = DraftManager(uow)
 
@@ -41,7 +40,7 @@ async def test_create_draft_version_gaps() -> None:
         model_configuration={},
         author_id=author_id,
     )
-    await draft_repo.add(draft_v10)
+    await uow.drafts.add(draft_v10)
 
     # Create next draft via manager
     draft_next = await draft_manager.create_draft(
@@ -69,7 +68,6 @@ async def test_create_draft_concurrent_race_condition() -> None:
     """
     uow = InMemoryUnitOfWork()
     project_repo = uow.projects
-    draft_repo = uow.drafts
     project_manager = ProjectManager(project_repo)
     draft_manager = DraftManager(uow)
 
@@ -147,7 +145,6 @@ async def test_create_draft_empty_inputs() -> None:
     """
     uow = InMemoryUnitOfWork()
     project_repo = uow.projects
-    draft_repo = uow.drafts
     project_manager = ProjectManager(project_repo)
     draft_manager = DraftManager(uow)
 

@@ -109,7 +109,7 @@ class UnitOfWork(ABC):
         pass  # pragma: no cover
 
     @abstractmethod
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+    async def __aexit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
         """Ends a transaction (commit or rollback)."""
         pass  # pragma: no cover
 

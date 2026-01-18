@@ -14,7 +14,6 @@ from uuid import UUID
 
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.interfaces import (
-    DraftRepository,
     ProjectRepository,
     UnitOfWork,
 )

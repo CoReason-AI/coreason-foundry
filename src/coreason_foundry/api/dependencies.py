@@ -20,8 +20,6 @@ from coreason_foundry.managers import (
     ProjectManager,
 )
 from coreason_foundry.memory import (
-    InMemoryDraftRepository,
-    InMemoryProjectRepository,
     InMemoryUnitOfWork,
 )
 

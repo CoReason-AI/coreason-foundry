@@ -21,7 +21,6 @@ from coreason_foundry.memory import InMemoryUnitOfWork
 async def test_create_first_draft() -> None:
     uow = InMemoryUnitOfWork()
     project_repo = uow.projects
-    draft_repo = uow.drafts
 
     project_manager = ProjectManager(project_repo)
     draft_manager = DraftManager(uow)
@@ -55,7 +54,6 @@ async def test_create_first_draft() -> None:
 async def test_create_subsequent_drafts() -> None:
     uow = InMemoryUnitOfWork()
     project_repo = uow.projects
-    draft_repo = uow.drafts
 
     project_manager = ProjectManager(project_repo)
     draft_manager = DraftManager(uow)

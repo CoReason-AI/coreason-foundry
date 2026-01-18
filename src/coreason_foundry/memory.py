@@ -32,22 +32,28 @@ class GenericInMemoryRepository(Generic[T]):
     def __init__(self, storage: Dict[UUID, Any]) -> None:
         self._storage = storage
 
-    async def _add(self, entity: Any) -> Any:
+    async def _add(self, entity: T) -> T:
         # Check for existing ID to simulate database PK constraint
-        if entity.id in self._storage:
-            raise ValueError(f"Entity with ID {entity.id} already exists.")
+        # Use getattr to satisfy mypy since T is generic
+        entity_id = getattr(entity, "id", None)
+        if entity_id and entity_id in self._storage:
+            raise ValueError(f"Entity with ID {entity_id} already exists.")
 
         # Store a deep copy to mimic DB isolation
-        self._storage[entity.id] = copy.deepcopy(entity)
+        if entity_id:
+            self._storage[entity_id] = copy.deepcopy(entity)
+
+        # We assume entity has an ID for this repo logic to work
         return copy.deepcopy(entity)
 
-    async def _update(self, entity: Any) -> Any:
+    async def _update(self, entity: T) -> T:
         # Check if entity exists
-        if entity.id not in self._storage:
-             raise ValueError(f"Entity with ID {entity.id} not found.")
+        entity_id = getattr(entity, "id", None)
+        if not entity_id or entity_id not in self._storage:
+            raise ValueError(f"Entity with ID {entity_id} not found.")
 
         # Update storage
-        self._storage[entity.id] = copy.deepcopy(entity)
+        self._storage[entity_id] = copy.deepcopy(entity)
         return copy.deepcopy(entity)
 
     async def _get(self, entity_id: UUID) -> Optional[T]:
@@ -70,6 +76,7 @@ class InMemoryProjectRepository(GenericInMemoryRepository[Project], ProjectRepos
     """
     In-memory implementation of ProjectRepository.
     """
+
     def __init__(self, storage: Optional[Dict[UUID, Any]] = None) -> None:
         super().__init__(storage if storage is not None else {})
 
@@ -90,6 +97,7 @@ class InMemoryDraftRepository(GenericInMemoryRepository[Draft], DraftRepository)
     """
     In-memory implementation of DraftRepository.
     """
+
     def __init__(self, storage: Optional[Dict[UUID, Any]] = None) -> None:
         super().__init__(storage if storage is not None else {})
 
@@ -126,6 +134,7 @@ class InMemoryCommentRepository(GenericInMemoryRepository[Comment], CommentRepos
     """
     In-memory implementation of CommentRepository.
     """
+
     def __init__(self, storage: Optional[Dict[UUID, Any]] = None) -> None:
         super().__init__(storage if storage is not None else {})
 
@@ -171,7 +180,7 @@ class InMemoryUnitOfWork(UnitOfWork):
         # If we wanted true rollback, we'd snapshot storage here.
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+    async def __aexit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
         if exc_type:
             await self.rollback()
         else:
@@ -187,8 +196,6 @@ class InMemoryUnitOfWork(UnitOfWork):
         # unless we implement a "transactional" in-memory repo which writes to a temporary dict
         # and merges on commit.
         pass
-
-
 
 
 class InMemoryPresenceRegistry(PresenceRegistry):

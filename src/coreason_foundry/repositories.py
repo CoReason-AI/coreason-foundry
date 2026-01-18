@@ -50,7 +50,7 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             .where(ProjectORM.id == project.id)
             .values(
                 name=project.name,
-                current_draft_id=project.current_draft_id
+                current_draft_id=project.current_draft_id,
                 # created_at is immutable
             )
             .execution_options(synchronize_session="fetch")
@@ -226,7 +226,7 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
     async def __aenter__(self) -> "UnitOfWork":
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+    async def __aexit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
         if exc_type:
             await self.rollback()
         else:

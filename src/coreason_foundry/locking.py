@@ -46,7 +46,7 @@ class RedisLockRegistry(LockRegistry):
             # Requirement says: { user_id: '...', expires_at: '...' }
             # We'll just put "Redis TTL" or calculate it if strictness required.
             # Let's calculate it to be safe.
-            "expires_at": "managed_by_redis_ttl"
+            "expires_at": "managed_by_redis_ttl",
         }
         value = json.dumps(payload)
 
