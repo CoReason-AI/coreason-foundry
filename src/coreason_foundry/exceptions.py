@@ -8,12 +8,8 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-"""
-The Workspace Manager
-"""
 
-__version__ = "0.1.0"
-__author__ = "Gowtham A Rao"
-__email__ = "gowtham.rao@coreason.ai"
+class ProjectNotFoundError(Exception):
+    """Raised when a requested project cannot be found."""
 
-__all__: list[str] = []
+    pass

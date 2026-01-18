@@ -9,11 +9,5 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 """
-The Workspace Manager
+Database module.
 """
-
-__version__ = "0.1.0"
-__author__ = "Gowtham A Rao"
-__email__ = "gowtham.rao@coreason.ai"
-
-__all__: list[str] = []

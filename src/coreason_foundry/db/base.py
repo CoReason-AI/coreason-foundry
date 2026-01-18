@@ -8,12 +8,9 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-"""
-The Workspace Manager
-"""
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy.orm import DeclarativeBase
 
-__version__ = "0.1.0"
-__author__ = "Gowtham A Rao"
-__email__ = "gowtham.rao@coreason.ai"
 
-__all__: list[str] = []
+class Base(AsyncAttrs, DeclarativeBase):
+    pass
