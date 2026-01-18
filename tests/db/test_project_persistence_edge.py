@@ -25,7 +25,7 @@ async def test_project_repository_save_with_draft_id(db_session: AsyncSession) -
 
     project = Project(id=project_id, name="Project with Draft", current_draft_id=draft_id)
 
-    await repo.save(project)
+    await repo.add(project)
 
     fetched = await repo.get(project_id)
     assert fetched is not None
@@ -55,10 +55,10 @@ async def test_project_repository_save_idempotency(db_session: AsyncSession) -> 
     project = Project(name="Idempotent Project")
 
     # Save once
-    saved1 = await repo.save(project)
+    saved1 = await repo.add(project)
 
     # Save again (should update/merge)
-    saved2 = await repo.save(saved1)
+    saved2 = await repo.update(saved1)
 
     assert saved1.id == saved2.id
     assert saved1.name == saved2.name

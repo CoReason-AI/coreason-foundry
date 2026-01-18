@@ -11,11 +11,16 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import delete, desc, select
+from sqlalchemy import delete, desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from coreason_foundry.db.models import CommentORM, DraftORM, ProjectORM
-from coreason_foundry.managers import CommentRepository, DraftRepository, ProjectRepository
+from coreason_foundry.interfaces import (
+    CommentRepository,
+    DraftRepository,
+    ProjectRepository,
+    UnitOfWork,
+)
 from coreason_foundry.models import Comment, Draft, Project
 
 
@@ -27,27 +32,32 @@ class SqlAlchemyProjectRepository(ProjectRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def save(self, project: Project) -> Project:
+    async def add(self, project: Project) -> Project:
         project_orm = ProjectORM(
             id=project.id,
             name=project.name,
             created_at=project.created_at,
             current_draft_id=project.current_draft_id,
         )
-        # Check if exists to update or merge?
-        # For now, simple merge logic or just add.
-        # Since 'Project' model is Pydantic, we need to map to ORM.
-        # If ID exists, we should probably update.
-        # Using merge for simplicity in this implementation.
-        merged_orm = await self.session.merge(project_orm)
+        self.session.add(project_orm)
         await self.session.flush()
+        return project
 
-        return Project(
-            id=merged_orm.id,
-            name=merged_orm.name,
-            created_at=merged_orm.created_at,
-            current_draft_id=merged_orm.current_draft_id,
+    async def update(self, project: Project) -> Project:
+        # Perform specific update query
+        stmt = (
+            update(ProjectORM)
+            .where(ProjectORM.id == project.id)
+            .values(
+                name=project.name,
+                current_draft_id=project.current_draft_id
+                # created_at is immutable
+            )
+            .execution_options(synchronize_session="fetch")
         )
+        await self.session.execute(stmt)
+        await self.session.flush()
+        return project
 
     async def get(self, project_id: UUID) -> Optional[Project]:
         result = await self.session.execute(select(ProjectORM).where(ProjectORM.id == project_id))
@@ -83,7 +93,7 @@ class SqlAlchemyDraftRepository(DraftRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def save(self, draft: Draft) -> Draft:
+    async def add(self, draft: Draft) -> Draft:
         draft_orm = DraftORM(
             id=draft.id,
             project_id=draft.project_id,
@@ -94,19 +104,9 @@ class SqlAlchemyDraftRepository(DraftRepository):
             author_id=draft.author_id,
             created_at=draft.created_at,
         )
-        merged_orm = await self.session.merge(draft_orm)
+        self.session.add(draft_orm)
         await self.session.flush()
-
-        return Draft(
-            id=merged_orm.id,
-            project_id=merged_orm.project_id,
-            version_number=merged_orm.version_number,
-            prompt_text=merged_orm.prompt_text,
-            model_configuration=merged_orm.model_configuration,
-            scratchpad=merged_orm.scratchpad,
-            author_id=merged_orm.author_id,
-            created_at=merged_orm.created_at,
-        )
+        return draft
 
     async def get(self, draft_id: UUID) -> Optional[Draft]:
         result = await self.session.execute(select(DraftORM).where(DraftORM.id == draft_id))
@@ -162,7 +162,7 @@ class SqlAlchemyCommentRepository(CommentRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def save(self, comment: Comment) -> Comment:
+    async def add(self, comment: Comment) -> Comment:
         comment_orm = CommentORM(
             id=comment.id,
             draft_id=comment.draft_id,
@@ -171,17 +171,9 @@ class SqlAlchemyCommentRepository(CommentRepository):
             author_id=comment.author_id,
             created_at=comment.created_at,
         )
-        merged_orm = await self.session.merge(comment_orm)
+        self.session.add(comment_orm)
         await self.session.flush()
-
-        return Comment(
-            id=merged_orm.id,
-            draft_id=merged_orm.draft_id,
-            target_field=merged_orm.target_field,
-            text=merged_orm.text,
-            author_id=merged_orm.author_id,
-            created_at=merged_orm.created_at,
-        )
+        return comment
 
     async def get(self, comment_id: UUID) -> Optional[Comment]:
         result = await self.session.execute(select(CommentORM).where(CommentORM.id == comment_id))
@@ -218,3 +210,30 @@ class SqlAlchemyCommentRepository(CommentRepository):
         result = await self.session.execute(delete(CommentORM).where(CommentORM.id == comment_id))
         await self.session.flush()
         return result.rowcount > 0  # type: ignore
+
+
+class SqlAlchemyUnitOfWork(UnitOfWork):
+    """
+    SQLAlchemy Unit of Work implementation.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+        self.projects = SqlAlchemyProjectRepository(session)
+        self.drafts = SqlAlchemyDraftRepository(session)
+        self.comments = SqlAlchemyCommentRepository(session)
+
+    async def __aenter__(self) -> "UnitOfWork":
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+        if exc_type:
+            await self.rollback()
+        else:
+            await self.commit()
+
+    async def commit(self) -> None:
+        await self.session.commit()
+
+    async def rollback(self) -> None:
+        await self.session.rollback()

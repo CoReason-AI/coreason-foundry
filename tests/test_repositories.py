@@ -43,7 +43,7 @@ async def test_sqlalchemy_repo_create_and_get(db_session: AsyncSession) -> None:
     project = Project(name="Integration Test Project")
 
     # Save
-    saved_project = await repo.save(project)
+    saved_project = await repo.add(project)
     assert saved_project.id is not None
     assert saved_project.name == "Integration Test Project"
 
@@ -68,8 +68,8 @@ async def test_sqlalchemy_repo_list_all(db_session: AsyncSession) -> None:
     p1 = Project(name="Project A")
     p2 = Project(name="Project B")
 
-    await repo.save(p1)
-    await repo.save(p2)
+    await repo.add(p1)
+    await repo.add(p2)
 
     all_projects = await repo.list_all()
     assert len(all_projects) == 2
@@ -83,7 +83,7 @@ async def test_sqlalchemy_repo_list_all(db_session: AsyncSession) -> None:
 async def test_sqlalchemy_repo_update(db_session: AsyncSession) -> None:
     repo = SqlAlchemyProjectRepository(db_session)
     project = Project(name="Original Name")
-    await repo.save(project)
+    await repo.add(project)
 
     # Update object
     project.name = "Updated Name"
@@ -91,7 +91,7 @@ async def test_sqlalchemy_repo_update(db_session: AsyncSession) -> None:
     project.current_draft_id = new_draft_id
 
     # Save again
-    await repo.save(project)
+    await repo.update(project)
 
     # Verify persistence
     retrieved = await repo.get(project.id)

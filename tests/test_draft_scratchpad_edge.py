@@ -12,17 +12,17 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import DraftManager, InMemoryDraftRepository, InMemoryProjectRepository, ProjectManager
+from coreason_foundry.managers import DraftManager, ProjectManager
+from coreason_foundry.memory import InMemoryUnitOfWork
 
 
 @pytest.mark.asyncio
 async def test_scratchpad_empty_string_vs_none() -> None:
     """Verify that an empty string is preserved and distinct from None."""
     # Setup
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project_manager = ProjectManager(project_repo)
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project_manager = ProjectManager(uow.projects)
     project = await project_manager.create_project("Edge Case Project")
     author_id = uuid4()
 
@@ -38,8 +38,8 @@ async def test_scratchpad_empty_string_vs_none() -> None:
     assert draft1.scratchpad != draft2.scratchpad
 
     # Verify Persistence
-    saved_d1 = await draft_repo.get(draft1.id)
-    saved_d2 = await draft_repo.get(draft2.id)
+    saved_d1 = await uow.drafts.get(draft1.id)
+    saved_d2 = await uow.drafts.get(draft2.id)
     assert saved_d1 is not None and saved_d1.scratchpad is None
     assert saved_d2 is not None and saved_d2.scratchpad == ""
 
@@ -47,17 +47,16 @@ async def test_scratchpad_empty_string_vs_none() -> None:
 @pytest.mark.asyncio
 async def test_scratchpad_whitespace_preservation() -> None:
     """Verify that whitespace is strictly preserved (critical for Markdown/Code)."""
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project = await ProjectManager(project_repo).create_project("Whitespace Project")
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project = await ProjectManager(uow.projects).create_project("Whitespace Project")
 
     # Text with mix of tabs, newlines, and trailing spaces
     complex_whitespace = "\n  List Item:\n\t* Indented\n    "
 
     draft = await manager.create_draft(project.id, "Prompt", {}, uuid4(), scratchpad=complex_whitespace)
 
-    saved = await draft_repo.get(draft.id)
+    saved = await uow.drafts.get(draft.id)
     assert saved is not None
     assert saved.scratchpad == complex_whitespace
     assert len(saved.scratchpad) == len(complex_whitespace)
@@ -66,16 +65,15 @@ async def test_scratchpad_whitespace_preservation() -> None:
 @pytest.mark.asyncio
 async def test_scratchpad_unicode_and_emojis() -> None:
     """Verify support for Unicode characters and Emojis."""
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project = await ProjectManager(project_repo).create_project("Unicode Project")
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project = await ProjectManager(uow.projects).create_project("Unicode Project")
 
     unicode_content = "Engineering Note 📝: \nFixed bug in 'café' module. \n🚀 Ready for deploy! \nひらがな"
 
     draft = await manager.create_draft(project.id, "Prompt", {}, uuid4(), scratchpad=unicode_content)
 
-    saved = await draft_repo.get(draft.id)
+    saved = await uow.drafts.get(draft.id)
     assert saved is not None
     assert saved.scratchpad == unicode_content
 
@@ -83,17 +81,16 @@ async def test_scratchpad_unicode_and_emojis() -> None:
 @pytest.mark.asyncio
 async def test_scratchpad_large_payload() -> None:
     """Verify handling of large text content."""
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project = await ProjectManager(project_repo).create_project("Large Payload Project")
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project = await ProjectManager(uow.projects).create_project("Large Payload Project")
 
     # Create a 100KB string
     large_content = "Line of text.\n" * 5000
 
     draft = await manager.create_draft(project.id, "Prompt", {}, uuid4(), scratchpad=large_content)
 
-    saved = await draft_repo.get(draft.id)
+    saved = await uow.drafts.get(draft.id)
     assert saved is not None
     assert saved.scratchpad == large_content
     assert len(saved.scratchpad) >= 5000 * 10
@@ -105,10 +102,9 @@ async def test_scratchpad_no_automatic_inheritance() -> None:
     Verify that a new draft does NOT inherit the scratchpad from the previous version
     unless explicitly passed. This confirms the system expects the client to manage state carry-over.
     """
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project = await ProjectManager(project_repo).create_project("Inheritance Project")
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project = await ProjectManager(uow.projects).create_project("Inheritance Project")
     author_id = uuid4()
 
     # v1: Has scratchpad

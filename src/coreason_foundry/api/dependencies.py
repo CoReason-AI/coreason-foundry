@@ -14,13 +14,15 @@ from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, status
 
+from coreason_foundry.interfaces import DraftRepository, ProjectRepository, UnitOfWork
 from coreason_foundry.managers import (
     DraftManager,
-    DraftRepository,
+    ProjectManager,
+)
+from coreason_foundry.memory import (
     InMemoryDraftRepository,
     InMemoryProjectRepository,
-    ProjectManager,
-    ProjectRepository,
+    InMemoryUnitOfWork,
 )
 
 
@@ -44,21 +46,30 @@ def get_current_user_id(x_user_id: Annotated[str | None, Header()] = None) -> UU
 
 
 @lru_cache
-def get_project_repository() -> ProjectRepository:
+def get_unit_of_work() -> UnitOfWork:
     """
-    Returns a singleton instance of the ProjectRepository.
-    Defaults to InMemoryProjectRepository for this iteration.
+    Returns a singleton InMemoryUnitOfWork for testing.
+    In production with SQL, this would not be cached/singleton, but request-scoped.
     """
-    return InMemoryProjectRepository()
+    return InMemoryUnitOfWork()
 
 
-@lru_cache
-def get_draft_repository() -> DraftRepository:
+def get_project_repository(
+    uow: Annotated[UnitOfWork, Depends(get_unit_of_work)],
+) -> ProjectRepository:
     """
-    Returns a singleton instance of the DraftRepository.
-    Defaults to InMemoryDraftRepository for this iteration.
+    Returns the ProjectRepository from the UnitOfWork.
     """
-    return InMemoryDraftRepository()
+    return uow.projects
+
+
+def get_draft_repository(
+    uow: Annotated[UnitOfWork, Depends(get_unit_of_work)],
+) -> DraftRepository:
+    """
+    Returns the DraftRepository from the UnitOfWork.
+    """
+    return uow.drafts
 
 
 def get_project_manager(
@@ -71,10 +82,9 @@ def get_project_manager(
 
 
 def get_draft_manager(
-    project_repo: Annotated[ProjectRepository, Depends(get_project_repository)],
-    draft_repo: Annotated[DraftRepository, Depends(get_draft_repository)],
+    uow: Annotated[UnitOfWork, Depends(get_unit_of_work)],
 ) -> DraftManager:
     """
-    Returns a DraftManager instance with injected repositories.
+    Returns a DraftManager instance with injected UnitOfWork.
     """
-    return DraftManager(project_repo=project_repo, draft_repo=draft_repo)
+    return DraftManager(uow=uow)

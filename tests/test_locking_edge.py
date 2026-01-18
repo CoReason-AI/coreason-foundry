@@ -156,3 +156,31 @@ async def test_corrupted_lock_data(lock_registry: RedisLockRegistry, redis_clien
 
     # Expectation: None (graceful failure)
     assert owner is None
+
+
+@pytest.mark.asyncio
+async def test_json_schema_enforcement(lock_registry: RedisLockRegistry, redis_client: FakeAsyncRedis) -> None:
+    """
+    Verify that the lock value is stored as valid JSON with the required schema.
+    """
+    import json
+
+    project_id = uuid.uuid4()
+    field = "schema_test"
+    user_id = uuid.uuid4()
+
+    await lock_registry.acquire(project_id, field, user_id)
+
+    key = lock_registry._make_key(project_id, field)
+    raw_value = await redis_client.get(key)
+
+    assert raw_value is not None
+
+    # Parse JSON
+    data = json.loads(raw_value)
+
+    # Verify Schema
+    assert "user_id" in data
+    assert "expires_at" in data
+    assert data["user_id"] == str(user_id)
+    assert data["expires_at"] == "managed_by_redis_ttl"

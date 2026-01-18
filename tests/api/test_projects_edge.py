@@ -16,7 +16,7 @@ from httpx import ASGITransport, AsyncClient
 
 from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import get_project_repository
-from coreason_foundry.managers import InMemoryProjectRepository
+from coreason_foundry.memory import InMemoryProjectRepository
 
 
 @pytest.fixture

@@ -12,15 +12,15 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import DraftManager, InMemoryDraftRepository, InMemoryProjectRepository
+from coreason_foundry.managers import DraftManager
+from coreason_foundry.memory import InMemoryUnitOfWork
 from coreason_foundry.models import Project
 
 
 @pytest.fixture
 def draft_manager() -> DraftManager:
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    return DraftManager(project_repo, draft_repo)
+    uow = InMemoryUnitOfWork()
+    return DraftManager(uow)
 
 
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_diff_empty_content(draft_manager: DraftManager) -> None:
     """Test diffing against empty strings."""
     author_id = uuid4()
     project = Project(name="Edge Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     draft_empty = await draft_manager.create_draft(project.id, "", {}, author_id)
     draft_content = await draft_manager.create_draft(project.id, "Line 1\nLine 2", {}, author_id)
@@ -51,7 +51,7 @@ async def test_diff_unicode_content(draft_manager: DraftManager) -> None:
     """Test diffing with Unicode characters."""
     author_id = uuid4()
     project = Project(name="Unicode Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     text_a = "Hello World 🌍\nPython is fun 🐍"
     text_b = "Hello World 🌎\nPython is cool 🐍"
@@ -72,7 +72,7 @@ async def test_diff_whitespace_changes(draft_manager: DraftManager) -> None:
     """Test diffing subtle whitespace changes."""
     author_id = uuid4()
     project = Project(name="Whitespace Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     draft_a = await draft_manager.create_draft(project.id, "Line 1", {}, author_id)
     draft_b = await draft_manager.create_draft(project.id, "Line 1 ", {}, author_id)  # Trailing space
@@ -88,7 +88,7 @@ async def test_diff_multihunk_complex(draft_manager: DraftManager) -> None:
     """Test a diff with multiple separated changes (hunks)."""
     author_id = uuid4()
     project = Project(name="Complex Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     # Create a long text with changes at top and bottom
     lines_a = ["Header"] + [f"Line {i}" for i in range(20)] + ["Footer"]
@@ -123,7 +123,7 @@ async def test_diff_large_input_safety(draft_manager: DraftManager) -> None:
     """Test diffing moderately large inputs to ensure no recursion depth or timeout issues."""
     author_id = uuid4()
     project = Project(name="Large Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     # 2000 lines
     lines_a = [f"This is line {i}" for i in range(2000)]

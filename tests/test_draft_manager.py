@@ -13,20 +13,18 @@ from uuid import uuid4
 import pytest
 
 from coreason_foundry.exceptions import ProjectNotFoundError
-from coreason_foundry.managers import (
-    DraftManager,
-    InMemoryDraftRepository,
-    InMemoryProjectRepository,
-    ProjectManager,
-)
+from coreason_foundry.managers import DraftManager, ProjectManager
+from coreason_foundry.memory import InMemoryUnitOfWork
 
 
 @pytest.mark.asyncio
 async def test_create_first_draft() -> None:
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
+    draft_repo = uow.drafts
+
     project_manager = ProjectManager(project_repo)
-    draft_manager = DraftManager(project_repo, draft_repo)
+    draft_manager = DraftManager(uow)
 
     # Create Project
     project = await project_manager.create_project("Agent Alpha")
@@ -55,10 +53,12 @@ async def test_create_first_draft() -> None:
 
 @pytest.mark.asyncio
 async def test_create_subsequent_drafts() -> None:
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
+    draft_repo = uow.drafts
+
     project_manager = ProjectManager(project_repo)
-    draft_manager = DraftManager(project_repo, draft_repo)
+    draft_manager = DraftManager(uow)
 
     project = await project_manager.create_project("Agent Beta")
     author_id = uuid4()
@@ -90,9 +90,8 @@ async def test_create_subsequent_drafts() -> None:
 
 @pytest.mark.asyncio
 async def test_create_draft_project_not_found() -> None:
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    draft_manager = DraftManager(project_repo, draft_repo)
+    uow = InMemoryUnitOfWork()
+    draft_manager = DraftManager(uow)
 
     with pytest.raises(ProjectNotFoundError):
         await draft_manager.create_draft(
@@ -106,9 +105,11 @@ async def test_create_draft_project_not_found() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_draft_repo_get() -> None:
     """Test get method of InMemoryDraftRepository to reach 100% coverage."""
-    draft_repo = InMemoryDraftRepository()
-    project_repo = InMemoryProjectRepository()
-    draft_manager = DraftManager(project_repo, draft_repo)
+    uow = InMemoryUnitOfWork()
+    project_repo = uow.projects
+    draft_repo = uow.drafts
+
+    draft_manager = DraftManager(uow)
     project_manager = ProjectManager(project_repo)
 
     project = await project_manager.create_project("Test Agent")

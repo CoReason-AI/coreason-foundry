@@ -12,15 +12,15 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import DraftManager, InMemoryDraftRepository, InMemoryProjectRepository
+from coreason_foundry.managers import DraftManager
+from coreason_foundry.memory import InMemoryUnitOfWork
 from coreason_foundry.models import Project
 
 
 @pytest.fixture
 def draft_manager() -> DraftManager:
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    return DraftManager(project_repo, draft_repo)
+    uow = InMemoryUnitOfWork()
+    return DraftManager(uow)
 
 
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_compare_versions_success(draft_manager: DraftManager) -> None:
     # Setup
     author_id = uuid4()
     project = Project(name="Test Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     draft1 = await draft_manager.create_draft(project.id, "Hello World\nLine 2", {}, author_id)
 
@@ -49,7 +49,7 @@ async def test_compare_versions_identical(draft_manager: DraftManager) -> None:
     # Setup
     author_id = uuid4()
     project = Project(name="Test Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
 
     draft1 = await draft_manager.create_draft(project.id, "Hello World", {}, author_id)
 
@@ -67,7 +67,7 @@ async def test_compare_versions_not_found(draft_manager: DraftManager) -> None:
     # Setup
     author_id = uuid4()
     project = Project(name="Test Project")
-    await draft_manager.project_repo.save(project)
+    await draft_manager.project_repo.add(project)
     draft1 = await draft_manager.create_draft(project.id, "Hello World", {}, author_id)
 
     # Execute & Verify
@@ -83,9 +83,9 @@ async def test_compare_versions_different_projects(draft_manager: DraftManager) 
     # Setup
     author_id = uuid4()
     project1 = Project(name="Project 1")
-    await draft_manager.project_repo.save(project1)
+    await draft_manager.project_repo.add(project1)
     project2 = Project(name="Project 2")
-    await draft_manager.project_repo.save(project2)
+    await draft_manager.project_repo.add(project2)
 
     draft1 = await draft_manager.create_draft(project1.id, "Content 1", {}, author_id)
 

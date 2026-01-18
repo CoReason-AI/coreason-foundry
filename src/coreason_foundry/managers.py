@@ -8,263 +8,18 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-import copy
 import difflib
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from coreason_foundry.exceptions import ProjectNotFoundError
-from coreason_foundry.models import Comment, Draft, Project
+from coreason_foundry.interfaces import (
+    DraftRepository,
+    ProjectRepository,
+    UnitOfWork,
+)
+from coreason_foundry.models import Draft, Project
 from coreason_foundry.utils.logger import logger
-
-
-class ProjectRepository(ABC):
-    """
-    Abstract base class for Project storage.
-    """
-
-    @abstractmethod
-    async def save(self, project: Project) -> Project:
-        """Saves a project."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get(self, project_id: UUID) -> Optional[Project]:
-        """Retrieves a project by ID."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def list_all(self) -> List[Project]:
-        """Lists all projects."""
-        pass  # pragma: no cover
-
-
-class DraftRepository(ABC):
-    """
-    Abstract base class for Draft storage.
-    """
-
-    @abstractmethod
-    async def save(self, draft: Draft) -> Draft:
-        """Saves a draft."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get(self, draft_id: UUID) -> Optional[Draft]:
-        """Retrieves a draft by ID."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def list_by_project(self, project_id: UUID) -> List[Draft]:
-        """Lists all drafts for a project."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get_latest_version(self, project_id: UUID) -> Optional[int]:
-        """Retrieves the latest version number for a project."""
-        pass  # pragma: no cover
-
-
-class CommentRepository(ABC):
-    """
-    Abstract base class for Comment storage.
-    """
-
-    @abstractmethod
-    async def save(self, comment: Comment) -> Comment:
-        """Saves a comment."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get(self, comment_id: UUID) -> Optional[Comment]:
-        """Retrieves a comment by ID."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def list_by_draft(self, draft_id: UUID) -> List[Comment]:
-        """Lists all comments for a draft."""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def delete(self, comment_id: UUID) -> bool:
-        """Deletes a comment by ID. Returns True if deleted, False if not found."""
-        pass  # pragma: no cover
-
-
-class LockRegistry(ABC):
-    """
-    Abstract base class for Distributed Locking.
-    """
-
-    @abstractmethod
-    async def acquire(self, project_id: UUID, field: str, user_id: UUID, ttl_seconds: int = 60) -> bool:
-        """
-        Acquires a lock on a specific field of a project.
-        Returns True if successful, False if already locked by another user.
-        """
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def release(self, project_id: UUID, field: str, user_id: UUID) -> bool:
-        """
-        Releases a lock if it is held by the specified user.
-        Returns True if released, False if lock was not held by user.
-        """
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get_lock_owner(self, project_id: UUID, field: str) -> Optional[UUID]:
-        """
-        Returns the user_id of the current lock owner, or None if unlocked.
-        """
-        pass  # pragma: no cover
-
-
-class PresenceRegistry(ABC):
-    """
-    Abstract base class for Real-Time Presence (who is online).
-    """
-
-    @abstractmethod
-    async def add_user(self, project_id: UUID, user_id: UUID) -> None:
-        """
-        Marks a user as present in a project.
-        """
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def remove_user(self, project_id: UUID, user_id: UUID) -> None:
-        """
-        Removes a user from the project's presence list.
-        """
-        pass  # pragma: no cover
-
-    @abstractmethod
-    async def get_present_users(self, project_id: UUID) -> List[UUID]:
-        """
-        Returns a list of user_ids currently present in the project.
-        """
-        pass  # pragma: no cover
-
-
-class InMemoryProjectRepository(ProjectRepository):
-    """
-    In-memory implementation of ProjectRepository.
-    """
-
-    def __init__(self) -> None:
-        self._projects: dict[UUID, Project] = {}
-
-    async def save(self, project: Project) -> Project:
-        # Store a deep copy to mimic DB isolation
-        self._projects[project.id] = copy.deepcopy(project)
-        return copy.deepcopy(project)
-
-    async def get(self, project_id: UUID) -> Optional[Project]:
-        project = self._projects.get(project_id)
-        if project:
-            return copy.deepcopy(project)
-        return None
-
-    async def list_all(self) -> List[Project]:
-        return [copy.deepcopy(p) for p in self._projects.values()]
-
-
-class InMemoryDraftRepository(DraftRepository):
-    """
-    In-memory implementation of DraftRepository.
-    """
-
-    def __init__(self) -> None:
-        self._drafts: dict[UUID, Draft] = {}
-
-    async def save(self, draft: Draft) -> Draft:
-        # Simulate Unique Constraint (project_id, version_number)
-        for existing in self._drafts.values():
-            if existing.project_id == draft.project_id and existing.version_number == draft.version_number:
-                if existing.id != draft.id:
-                    # Raise an exception similar to what SQL would raise (IntegrityError)
-                    raise ValueError(
-                        f"Unique constraint violation: Draft {draft.version_number} "
-                        f"already exists for Project {draft.project_id}"
-                    )
-
-        self._drafts[draft.id] = copy.deepcopy(draft)
-        return copy.deepcopy(draft)
-
-    async def get(self, draft_id: UUID) -> Optional[Draft]:
-        draft = self._drafts.get(draft_id)
-        if draft:
-            return copy.deepcopy(draft)
-        return None
-
-    async def list_by_project(self, project_id: UUID) -> List[Draft]:
-        drafts = sorted(
-            [d for d in self._drafts.values() if d.project_id == project_id],
-            key=lambda d: d.version_number,
-        )
-        return [copy.deepcopy(d) for d in drafts]
-
-    async def get_latest_version(self, project_id: UUID) -> Optional[int]:
-        drafts = await self.list_by_project(project_id)
-        if not drafts:
-            return None
-        return drafts[-1].version_number
-
-
-class InMemoryCommentRepository(CommentRepository):
-    """
-    In-memory implementation of CommentRepository.
-    """
-
-    def __init__(self) -> None:
-        self._comments: dict[UUID, Comment] = {}
-
-    async def save(self, comment: Comment) -> Comment:
-        self._comments[comment.id] = copy.deepcopy(comment)
-        return copy.deepcopy(comment)
-
-    async def get(self, comment_id: UUID) -> Optional[Comment]:
-        comment = self._comments.get(comment_id)
-        if comment:
-            return copy.deepcopy(comment)
-        return None
-
-    async def list_by_draft(self, draft_id: UUID) -> List[Comment]:
-        comments = sorted(
-            [c for c in self._comments.values() if c.draft_id == draft_id],
-            key=lambda c: c.created_at,
-        )
-        return [copy.deepcopy(c) for c in comments]
-
-    async def delete(self, comment_id: UUID) -> bool:
-        if comment_id in self._comments:
-            del self._comments[comment_id]
-            return True
-        return False
-
-
-class InMemoryPresenceRegistry(PresenceRegistry):
-    """
-    In-memory implementation of PresenceRegistry.
-    """
-
-    def __init__(self) -> None:
-        # Map project_id -> Set[user_id]
-        self._presence: dict[UUID, set[UUID]] = {}
-
-    async def add_user(self, project_id: UUID, user_id: UUID) -> None:
-        if project_id not in self._presence:
-            self._presence[project_id] = set()
-        self._presence[project_id].add(user_id)
-
-    async def remove_user(self, project_id: UUID, user_id: UUID) -> None:
-        if project_id in self._presence:
-            self._presence[project_id].discard(user_id)
-
-    async def get_present_users(self, project_id: UUID) -> List[UUID]:
-        return list(self._presence.get(project_id, set()))
 
 
 class ProjectManager:
@@ -278,7 +33,7 @@ class ProjectManager:
     async def create_project(self, name: str) -> Project:
         """Creates a new project container."""
         project = Project(name=name)
-        await self.repository.save(project)
+        await self.repository.add(project)
         logger.info(f"Created project: {project.name} ({project.id})")
         return project
 
@@ -294,11 +49,17 @@ class ProjectManager:
 class DraftManager:
     """
     Manages the lifecycle of Drafts.
+    Uses UnitOfWork for transactional integrity.
     """
 
-    def __init__(self, project_repo: ProjectRepository, draft_repo: DraftRepository) -> None:
-        self.project_repo = project_repo
-        self.draft_repo = draft_repo
+    def __init__(self, uow: UnitOfWork) -> None:
+        self.uow = uow
+        # expose repositories for read-only convenience if needed,
+        # but operations should go through UoW if transactional.
+        # However, for 'compare_versions' (read-only), we can use uow.drafts.
+        # For backwards compatibility with tests that inspect .project_repo / .draft_repo:
+        self.project_repo = uow.projects
+        self.draft_repo = uow.drafts
 
     async def create_draft(
         self,
@@ -317,41 +78,33 @@ class DraftManager:
         3. Creates and persists the new draft.
         4. Updates the project's current_draft_id atomically.
         """
-        # 1. Verify Project Exists
-        project = await self.project_repo.get(project_id)
-        if not project:
-            logger.error(f"Failed to create draft: Project {project_id} not found.")
-            raise ProjectNotFoundError(f"Project with ID {project_id} not found.")
+        async with self.uow:
+            # 1. Verify Project Exists
+            project = await self.uow.projects.get(project_id)
+            if not project:
+                logger.error(f"Failed to create draft: Project {project_id} not found.")
+                raise ProjectNotFoundError(f"Project with ID {project_id} not found.")
 
-        # 2. Calculate Version
-        latest_version = await self.draft_repo.get_latest_version(project_id)
-        new_version = (latest_version or 0) + 1
+            # 2. Calculate Version
+            latest_version = await self.uow.drafts.get_latest_version(project_id)
+            new_version = (latest_version or 0) + 1
 
-        # 3. Create Draft
-        draft = Draft(
-            project_id=project_id,
-            version_number=new_version,
-            prompt_text=prompt_text,
-            model_configuration=model_configuration,
-            scratchpad=scratchpad,
-            author_id=author_id,
-        )
-        saved_draft = await self.draft_repo.save(draft)
+            # 3. Create Draft
+            draft = Draft(
+                project_id=project_id,
+                version_number=new_version,
+                prompt_text=prompt_text,
+                model_configuration=model_configuration,
+                scratchpad=scratchpad,
+                author_id=author_id,
+            )
+            saved_draft = await self.uow.drafts.add(draft)
 
-        # 4. Update Project Pointer
-        # Since Project is a Pydantic model (not frozen), we can update it?
-        # Check Project definition in models.py: it inherits from BaseModel, not frozen.
-        # But good practice is to treat as immutable if possible or just update field.
-        # However, to save it via repo, we pass the object.
-        # In SQL repo, it merges.
+            # 4. Update Project Pointer
+            project.current_draft_id = saved_draft.id
+            await self.uow.projects.update(project)
 
-        # We need to make sure we are updating the "current" state of the project.
-        # Ideally, we should use a transaction here, but at the Manager level,
-        # we rely on the Repositories sharing a session context if using SQL.
-        # For InMemory, it's immediate.
-
-        project.current_draft_id = saved_draft.id
-        await self.project_repo.save(project)
+            # Commit happens automatically on exit if no exception
 
         logger.info(f"Created Draft v{new_version} for Project {project_id}")
         return saved_draft
@@ -359,19 +112,10 @@ class DraftManager:
     async def compare_versions(self, draft_id_a: UUID, draft_id_b: UUID) -> str:
         """
         Compares two drafts and returns a unified diff of their prompt text.
-
-        Args:
-            draft_id_a: The ID of the first draft (base).
-            draft_id_b: The ID of the second draft (target).
-
-        Returns:
-            A string containing the unified diff.
-
-        Raises:
-            ValueError: If drafts are not found or belong to different projects.
         """
-        draft_a = await self.draft_repo.get(draft_id_a)
-        draft_b = await self.draft_repo.get(draft_id_b)
+        # Read-only operation, no transaction strictly needed but harmless.
+        draft_a = await self.uow.drafts.get(draft_id_a)
+        draft_b = await self.uow.drafts.get(draft_id_b)
 
         if not draft_a:
             raise ValueError(f"Draft {draft_id_a} not found.")
