@@ -8,14 +8,17 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-import pytest
-from uuid import uuid4
 from unittest.mock import MagicMock
+from uuid import uuid4
+
+import pytest
 from redis.asyncio import Redis
+
 from coreason_foundry.locking import RedisLockRegistry
 
+
 @pytest.fixture
-def mock_redis():
+def mock_redis() -> Redis:
     """
     Returns a fakeredis instance or a MagicMock that behaves like redis-py.
     Since we need Lua scripting, we should use fakeredis if available and configured with lua support,
@@ -25,14 +28,16 @@ def mock_redis():
     """
     try:
         import fakeredis.aioredis
+
         # Create a new FakeRedis instance
         return fakeredis.aioredis.FakeRedis(decode_responses=False)
     except ImportError:
         # Fallback to MagicMock if fakeredis is not installed (should not happen in this env)
         return MagicMock(spec=Redis)
 
+
 @pytest.mark.asyncio
-async def test_acquire_creates_index(mock_redis):
+async def test_acquire_creates_index(mock_redis: Redis) -> None:
     registry = RedisLockRegistry(mock_redis)
     project_id = uuid4()
     user_id = uuid4()
@@ -51,8 +56,9 @@ async def test_acquire_creates_index(mock_redis):
     members = await mock_redis.smembers(index_key)
     assert field.encode() in members
 
+
 @pytest.mark.asyncio
-async def test_release_updates_index(mock_redis):
+async def test_release_updates_index(mock_redis: Redis) -> None:
     registry = RedisLockRegistry(mock_redis)
     project_id = uuid4()
     user_id = uuid4()
@@ -74,8 +80,9 @@ async def test_release_updates_index(mock_redis):
     members = await mock_redis.smembers(index_key)
     assert field.encode() not in members
 
+
 @pytest.mark.asyncio
-async def test_release_all_for_user(mock_redis):
+async def test_release_all_for_user(mock_redis: Redis) -> None:
     registry = RedisLockRegistry(mock_redis)
     project_id = uuid4()
     user_id = uuid4()
@@ -102,8 +109,9 @@ async def test_release_all_for_user(mock_redis):
     # Verify index key gone
     assert await mock_redis.exists(index_key) == 0
 
+
 @pytest.mark.asyncio
-async def test_release_all_handles_expired_locks(mock_redis):
+async def test_release_all_handles_expired_locks(mock_redis: Redis) -> None:
     registry = RedisLockRegistry(mock_redis)
     project_id = uuid4()
     user_id = uuid4()
