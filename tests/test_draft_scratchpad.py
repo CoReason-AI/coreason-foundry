@@ -12,16 +12,16 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import DraftManager, InMemoryDraftRepository, InMemoryProjectRepository, ProjectManager
+from coreason_foundry.managers import DraftManager, ProjectManager
+from coreason_foundry.memory import InMemoryUnitOfWork
 
 
 @pytest.mark.asyncio
 async def test_create_draft_with_scratchpad() -> None:
     # Setup
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project_manager = ProjectManager(project_repo)
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project_manager = ProjectManager(uow.projects)
 
     project = await project_manager.create_project("Test Project")
     author_id = uuid4()
@@ -41,7 +41,7 @@ async def test_create_draft_with_scratchpad() -> None:
     assert draft.version_number == 1
 
     # Verify retrieval
-    retrieved_draft = await draft_repo.get(draft.id)
+    retrieved_draft = await uow.drafts.get(draft.id)
     assert retrieved_draft is not None
     assert retrieved_draft.scratchpad == scratchpad_content
 
@@ -49,10 +49,9 @@ async def test_create_draft_with_scratchpad() -> None:
 @pytest.mark.asyncio
 async def test_create_draft_without_scratchpad() -> None:
     # Setup
-    project_repo = InMemoryProjectRepository()
-    draft_repo = InMemoryDraftRepository()
-    manager = DraftManager(project_repo, draft_repo)
-    project_manager = ProjectManager(project_repo)
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow)
+    project_manager = ProjectManager(uow.projects)
 
     project = await project_manager.create_project("Test Project")
     author_id = uuid4()
@@ -67,6 +66,7 @@ async def test_create_draft_without_scratchpad() -> None:
     assert draft.version_number == 1
 
     # Verify retrieval
-    retrieved_draft = await draft_repo.get(draft.id)
+    retrieved_draft = await uow.drafts.get(draft.id)
+    retrieved_draft = await uow.drafts.get(draft.id)
     assert retrieved_draft is not None
     assert retrieved_draft.scratchpad is None

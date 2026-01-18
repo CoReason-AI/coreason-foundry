@@ -12,7 +12,8 @@ from uuid import uuid4
 
 import pytest
 
-from coreason_foundry.managers import InMemoryProjectRepository, ProjectManager
+from coreason_foundry.managers import ProjectManager
+from coreason_foundry.memory import InMemoryProjectRepository
 
 
 @pytest.mark.asyncio
