@@ -120,6 +120,14 @@ class LockRegistry(ABC):
         """
         pass  # pragma: no cover
 
+    @abstractmethod
+    async def release_all_for_user(self, project_id: UUID, user_id: UUID) -> int:
+        """
+        Releases all locks held by a specific user in a project.
+        Returns the number of locks released.
+        """
+        pass  # pragma: no cover
+
 
 class PresenceRegistry(ABC):
     """

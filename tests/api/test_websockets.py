@@ -8,44 +8,65 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
+import asyncio
 from typing import Any, Generator, Tuple
-from unittest.mock import patch
-from uuid import uuid4
+from unittest.mock import MagicMock, patch
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from coreason_foundry.api.app import app
-from coreason_foundry.api.dependencies import get_connection_manager, get_presence_registry
+from coreason_foundry.api.dependencies import get_connection_manager, get_lock_registry, get_presence_registry
 from coreason_foundry.api.websockets import ConnectionManager
-from coreason_foundry.managers import InMemoryPresenceRegistry, PresenceRegistry
+from coreason_foundry.managers import InMemoryPresenceRegistry, LockRegistry, PresenceRegistry
+
+
+# Mock Lock Registry
+class MockLockRegistry(LockRegistry):
+    async def acquire(self, project_id: UUID, field: str, user_id: UUID, ttl_seconds: int = 60) -> bool:
+        return True
+
+    async def release(self, project_id: UUID, field: str, user_id: UUID) -> bool:
+        return True
+
+    async def get_lock_owner(self, project_id: UUID, field: str) -> Any:
+        return None
+
+    async def release_all_for_user(self, project_id: UUID, user_id: UUID) -> int:
+        return 5  # Dummy count
 
 
 @pytest.fixture
-def fresh_deps() -> Generator[Tuple[PresenceRegistry, ConnectionManager], None, None]:
+def fresh_deps() -> Generator[Tuple[PresenceRegistry, ConnectionManager, LockRegistry], None, None]:
     """
     Overrides dependencies with fresh instances for each test.
     """
     registry = InMemoryPresenceRegistry()
-    manager = ConnectionManager(registry)
+    lock_registry = MockLockRegistry()
+    manager = ConnectionManager(registry, lock_registry)
 
     def override_get_presence_registry() -> PresenceRegistry:
         return registry
+
+    def override_get_lock_registry() -> LockRegistry:
+        return lock_registry
 
     def override_get_connection_manager() -> ConnectionManager:
         return manager
 
     app.dependency_overrides[get_presence_registry] = override_get_presence_registry
+    app.dependency_overrides[get_lock_registry] = override_get_lock_registry
     app.dependency_overrides[get_connection_manager] = override_get_connection_manager
 
-    yield registry, manager
+    yield registry, manager, lock_registry
 
     app.dependency_overrides = {}
 
 
 @pytest.fixture
-def client(fresh_deps: Tuple[PresenceRegistry, ConnectionManager]) -> TestClient:
+def client(fresh_deps: Tuple[PresenceRegistry, ConnectionManager, LockRegistry]) -> TestClient:
     return TestClient(app)
 
 
@@ -80,9 +101,11 @@ def test_websocket_connect_invalid_user_id(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_presence_update_on_connect_disconnect(fresh_deps: Tuple[PresenceRegistry, ConnectionManager]) -> None:
+async def test_presence_update_on_connect_disconnect(
+    fresh_deps: Tuple[PresenceRegistry, ConnectionManager, LockRegistry],
+) -> None:
     # Retrieve the fresh registry instance used by the app
-    registry, _ = fresh_deps
+    registry, _, _ = fresh_deps
 
     client = TestClient(app)
     project_id = uuid4()
@@ -149,7 +172,8 @@ async def test_broadcast_exception_handling() -> None:
             raise Exception("Connection lost")
 
     registry = InMemoryPresenceRegistry()
-    manager = ConnectionManager(registry)
+    lock_registry = MockLockRegistry()
+    manager = ConnectionManager(registry, lock_registry)
 
     project_id = uuid4()
     mock_ws = MockWebSocket()
@@ -161,34 +185,31 @@ async def test_broadcast_exception_handling() -> None:
 
 
 @pytest.mark.asyncio
-async def test_route_generic_exception_handling(fresh_deps: Tuple[PresenceRegistry, ConnectionManager]) -> None:
+async def test_route_generic_exception_handling(
+    fresh_deps: Tuple[PresenceRegistry, ConnectionManager, LockRegistry],
+) -> None:
     """
     Test that a generic exception in the websocket loop triggers disconnect/cleanup.
+    (Synchronous test version)
     """
-    _, manager = fresh_deps
+    _, manager, _ = fresh_deps
     project_id = uuid4()
     user_id = uuid4()
 
     # Use patch.object to safely mock methods on the instance
+    # We use asyncio.Future to simulate async return values
 
-    # We use AsyncMock for async methods if available, but MagicMock returning coroutines/Futures works
-    # Using async def local functions is easiest for side effects if needed,
-    # but patch.object expects the replacement object.
+    f_err: asyncio.Future[None] = asyncio.Future()
+    f_err.set_exception(Exception("Something went wrong"))
 
-    # Creating async mock functions
-    async def mock_connect(*args: Any, **kwargs: Any) -> None:
-        raise Exception("Something went wrong")
+    f_ok: asyncio.Future[None] = asyncio.Future()
+    f_ok.set_result(None)
 
-    disconnect_called = False
+    # We need to track if disconnect was called.
+    # MagicMock can track calls.
 
-    async def mock_disconnect(*args: Any, **kwargs: Any) -> None:
-        nonlocal disconnect_called
-        disconnect_called = True
-
-    # patch.object expects the new attribute value.
-    # We pass side_effect with the async function, so patch.object wraps it correctly?
-    # No, patch.object(obj, attr, side_effect=...) works if the original is replaced by a Mock.
-    # If we pass `side_effect` to `patch.object`, it creates a MagicMock with that side effect.
+    mock_connect = MagicMock(return_value=f_err)
+    mock_disconnect = MagicMock(return_value=f_ok)
 
     with patch.object(manager, "connect", side_effect=mock_connect):
         with patch.object(manager, "disconnect", side_effect=mock_disconnect):
@@ -198,6 +219,27 @@ async def test_route_generic_exception_handling(fresh_deps: Tuple[PresenceRegist
                     with client.websocket_connect(f"/ws/projects/{project_id}?user_id={user_id}"):
                         pass
             except Exception:
-                pass
+                pass  # Should not happen if pytest.raises catches it
 
-    assert disconnect_called
+    assert mock_disconnect.called
+
+
+@pytest.mark.asyncio
+async def test_disconnect_releases_locks(fresh_deps: Tuple[PresenceRegistry, ConnectionManager, LockRegistry]) -> None:
+    """
+    Test that disconnect calls release_all_for_user on the lock registry.
+    """
+    _, manager, lock_registry = fresh_deps
+    project_id = uuid4()
+    user_id = uuid4()
+
+    # Spy on release_all_for_user
+    with patch.object(lock_registry, "release_all_for_user", wraps=lock_registry.release_all_for_user) as mock_release:
+        client = TestClient(app)
+        try:
+            with client.websocket_connect(f"/ws/projects/{project_id}?user_id={user_id}") as ws:
+                ws.close()
+        except WebSocketDisconnect:
+            pass
+
+        mock_release.assert_awaited_with(project_id, user_id)

@@ -13,14 +13,17 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, status
+from redis.asyncio import Redis
 
 from coreason_foundry.api.websockets import ConnectionManager
+from coreason_foundry.locking import RedisLockRegistry
 from coreason_foundry.managers import (
     DraftManager,
     DraftRepository,
     InMemoryDraftRepository,
     InMemoryPresenceRegistry,
     InMemoryProjectRepository,
+    LockRegistry,
     PresenceRegistry,
     ProjectManager,
     ProjectRepository,
@@ -73,14 +76,34 @@ def get_presence_registry() -> PresenceRegistry:
     return InMemoryPresenceRegistry()
 
 
+def get_redis_client() -> Redis:
+    """
+    Returns a Redis client.
+    Assuming localhost for now, or use environment variables in future.
+    """
+    # Using decode_responses=False to match existing code logic where we decode manually
+    return Redis(host="localhost", port=6379, db=0)
+
+
+@lru_cache
+def get_lock_registry(
+    redis_client: Annotated[Redis, Depends(get_redis_client)],
+) -> LockRegistry:
+    """
+    Returns a singleton instance of the LockRegistry.
+    """
+    return RedisLockRegistry(redis_client=redis_client)
+
+
 @lru_cache
 def get_connection_manager(
     presence_registry: Annotated[PresenceRegistry, Depends(get_presence_registry)],
+    lock_registry: Annotated[LockRegistry, Depends(get_lock_registry)],
 ) -> ConnectionManager:
     """
     Returns a singleton instance of the ConnectionManager.
     """
-    return ConnectionManager(presence_registry=presence_registry)
+    return ConnectionManager(presence_registry=presence_registry, lock_registry=lock_registry)
 
 
 def get_project_manager(

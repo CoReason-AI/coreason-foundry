@@ -14,7 +14,7 @@ from uuid import UUID
 
 from fastapi import WebSocket
 
-from coreason_foundry.managers import PresenceRegistry
+from coreason_foundry.managers import LockRegistry, PresenceRegistry
 from coreason_foundry.utils.logger import logger
 
 
@@ -23,8 +23,9 @@ class ConnectionManager:
     Manages active WebSocket connections and integrates with the PresenceRegistry.
     """
 
-    def __init__(self, presence_registry: PresenceRegistry) -> None:
+    def __init__(self, presence_registry: PresenceRegistry, lock_registry: LockRegistry) -> None:
         self.presence_registry = presence_registry
+        self.lock_registry = lock_registry
         # Map project_id -> list of active WebSockets
         self.active_connections: Dict[UUID, List[WebSocket]] = defaultdict(list)
 
@@ -72,9 +73,13 @@ class ConnectionManager:
         except Exception as e:
             logger.error(f"Failed to broadcast USER_LEFT for {user_id}: {e}")
 
-        # TODO: Release locks held by this user.
-        # This will be implemented in the next atomic unit.
-        logger.debug(f"Stub: Releasing all locks for User {user_id} in Project {project_id}")
+        # Release locks held by this user.
+        try:
+            released_count = await self.lock_registry.release_all_for_user(project_id, user_id)
+            if released_count > 0:
+                logger.info(f"Released {released_count} locks for User {user_id} in Project {project_id}")
+        except Exception as e:
+            logger.error(f"Failed to release locks for user {user_id}: {e}")
 
     async def broadcast(self, project_id: UUID, message: Dict[str, Any]) -> None:
         """

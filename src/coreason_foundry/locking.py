@@ -21,6 +21,8 @@ class RedisLockRegistry(LockRegistry):
     """
     Redis implementation of the LockRegistry.
     Uses 'SET key value NX EX ttl' for atomic locking.
+    Maintains a secondary index 'lock:user:{user_id}:project:{project_id}' (Set)
+    to track locks held by a user for bulk release.
     """
 
     def __init__(self, redis_client: Redis) -> None:
@@ -29,15 +31,38 @@ class RedisLockRegistry(LockRegistry):
     def _make_key(self, project_id: UUID, field: str) -> str:
         return f"lock:project:{project_id}:field:{field}"
 
+    def _make_user_index_key(self, project_id: UUID, user_id: UUID) -> str:
+        return f"lock:user:{user_id}:project:{project_id}"
+
     async def acquire(self, project_id: UUID, field: str, user_id: UUID, ttl_seconds: int = 60) -> bool:
         key = self._make_key(project_id, field)
+        user_index_key = self._make_user_index_key(project_id, user_id)
         value = str(user_id)
 
-        # NX=True: Set only if not exists
-        # EX=ttl_seconds: Set expiry
-        result = await self.redis.set(key, value, nx=True, ex=ttl_seconds)
+        # Lua script to atomicity acquire lock AND add to user index
+        # KEYS[1] = lock_key
+        # KEYS[2] = user_index_key
+        # ARGV[1] = user_id (value)
+        # ARGV[2] = ttl_seconds
+        # ARGV[3] = field_name (to store in set)
 
-        if result:
+        script = """
+        -- Try to acquire lock
+        -- SET key value NX EX ttl
+        local result = redis.call('set', KEYS[1], ARGV[1], 'NX', 'EX', ARGV[2])
+
+        if result then
+            -- Lock acquired, add field to user index
+            redis.call('sadd', KEYS[2], ARGV[3])
+            return 1
+        else
+            return 0
+        end
+        """
+
+        result = await self.redis.eval(script, 2, key, user_index_key, value, ttl_seconds, field)
+
+        if result == 1:
             logger.info(f"Lock acquired: {key} by {user_id}")
             return True
         else:
@@ -46,25 +71,25 @@ class RedisLockRegistry(LockRegistry):
 
     async def release(self, project_id: UUID, field: str, user_id: UUID) -> bool:
         key = self._make_key(project_id, field)
+        user_index_key = self._make_user_index_key(project_id, user_id)
 
-        # We need to ensure we only delete if WE own the lock.
-        # This requires a get-check-delete sequence.
-        # Ideally, use a Lua script for atomicity, but for now, simple check is okay
-        # provided we accept a tiny race condition (lock expires between get and delete).
-        # However, checking 'get' first is safer than blind delete.
-
-        # Better: Use Lua script.
-        # "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
+        # Lua script to verify ownership, delete lock, and remove from index
+        # KEYS[1] = lock_key
+        # KEYS[2] = user_index_key
+        # ARGV[1] = user_id
+        # ARGV[2] = field_name
 
         script = """
         if redis.call("get", KEYS[1]) == ARGV[1] then
-            return redis.call("del", KEYS[1])
+            redis.call("del", KEYS[1])
+            redis.call("srem", KEYS[2], ARGV[2])
+            return 1
         else
             return 0
         end
         """
 
-        result = await self.redis.eval(script, 1, key, str(user_id))
+        result = await self.redis.eval(script, 2, key, user_index_key, str(user_id), field)
 
         if result == 1:
             logger.info(f"Lock released: {key} by {user_id}")
@@ -84,3 +109,31 @@ class RedisLockRegistry(LockRegistry):
                 # Should not happen if we only store UUID strings
                 return None
         return None
+
+    async def release_all_for_user(self, project_id: UUID, user_id: UUID) -> int:
+        """
+        Releases all locks held by a user in a project.
+        """
+        user_index_key = self._make_user_index_key(project_id, user_id)
+
+        # We get all fields, then try to release them.
+        fields = await self.redis.smembers(user_index_key)
+        if not fields:
+            return 0
+
+        count = 0
+        # Pipeline the releases for performance - actually iterating sequentially for safety/simplicity with eval
+        for member in fields:
+            field = member.decode("utf-8") if isinstance(member, bytes) else str(member)
+            if await self.release(project_id, field, user_id):
+                count += 1
+
+        # Finally delete the index key (should be empty if all releases succeeded,
+        # but if some failed due to expiry, we should clean up).
+        # We release locks for ALL sessions of that user.
+        # This is intended behavior (single user shouldn't lock against themselves).
+
+        # So, we should clear the index.
+        await self.redis.delete(user_index_key)
+
+        return count
