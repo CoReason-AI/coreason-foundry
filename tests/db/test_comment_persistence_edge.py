@@ -160,3 +160,76 @@ async def test_concurrent_comment_insertions() -> None:
 
     # Cleanup
     await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_transaction_rollback_atomicity(db_session: AsyncSession) -> None:
+    """
+    Verify transaction atomicity: if a later operation in a transaction fails,
+    previous operations in the same transaction must be rolled back.
+    """
+    project_repo = SqlAlchemyProjectRepository(db_session)
+    draft_repo = SqlAlchemyDraftRepository(db_session)
+    comment_repo = SqlAlchemyCommentRepository(db_session)
+
+    # Setup parent
+    project = Project(name="Atomicity Project")
+    await project_repo.save(project)
+    draft = Draft(
+        project_id=project.id, version_number=1, prompt_text="Base", model_configuration={}, author_id=uuid4()
+    )
+    await draft_repo.save(draft)
+
+    # We want to test atomicity within a single transaction scope.
+    # The repositories use the passed `db_session`.
+
+    # 1. Save a VALID comment
+    valid_comment = Comment(draft_id=draft.id, target_field="prompt", text="Valid Comment", author_id=uuid4())
+    await comment_repo.save(valid_comment)
+
+    # 2. Try to save an INVALID comment (orphan) in the SAME session
+    # Note: `save` performs a flush. The error should happen here.
+    orphan_comment = Comment(draft_id=uuid4(), target_field="prompt", text="Invalid Comment", author_id=uuid4())
+
+    with pytest.raises(IntegrityError):
+        await comment_repo.save(orphan_comment)
+
+    # 3. Rollback the session (standard procedure after exception)
+    await db_session.rollback()
+
+    # 4. Verify that `valid_comment` was ALSO rolled back and does not exist in DB
+    # We need a new transaction/check to verify state
+    fetched = await comment_repo.get(valid_comment.id)
+    assert fetched is None, "Valid comment should have been rolled back along with the failed operation"
+
+
+@pytest.mark.asyncio
+async def test_persistence_large_payload(db_session: AsyncSession) -> None:
+    """
+    Verify that the persistence layer can handle very large comment text payloads.
+    Testing boundary conditions for text fields.
+    """
+    project_repo = SqlAlchemyProjectRepository(db_session)
+    draft_repo = SqlAlchemyDraftRepository(db_session)
+    comment_repo = SqlAlchemyCommentRepository(db_session)
+
+    # Setup
+    project = Project(name="Large Payload Project")
+    await project_repo.save(project)
+    draft = Draft(
+        project_id=project.id, version_number=1, prompt_text="Base", model_configuration={}, author_id=uuid4()
+    )
+    await draft_repo.save(draft)
+
+    # Create 1MB text payload
+    large_text = "x" * (1024 * 1024)  # 1MB
+
+    comment = Comment(draft_id=draft.id, target_field="prompt", text=large_text, author_id=uuid4())
+
+    await comment_repo.save(comment)
+
+    # Fetch and verify
+    fetched = await comment_repo.get(comment.id)
+    assert fetched is not None
+    assert fetched.text == large_text
+    assert len(fetched.text) == 1024 * 1024
