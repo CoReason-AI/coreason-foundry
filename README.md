@@ -1,8 +1,19 @@
 # coreason-foundry
 
-The Workspace Manager
+**The Collaborative Workspace Manager & Real-Time State Engine**
 
 [![CI](https://github.com/CoReason-AI/coreason_foundry/actions/workflows/ci.yml/badge.svg)](https://github.com/CoReason-AI/coreason_foundry/actions/workflows/ci.yml)
+
+`coreason-foundry` is the interactive, stateful backend for the CoReason IDE. It bridges the gap between fleeting engineering thoughts and permanent GxP artifacts.
+
+## Documentation
+
+Full documentation is available in the `docs/` directory and includes:
+
+-   [**Product Requirements**](docs/product_requirements.md)
+-   [**Architecture**](docs/architecture.md)
+-   [**Usage Guide**](docs/usage.md)
+-   [**Vignette**](docs/vignette.md)
 
 ## Getting Started
 
@@ -15,15 +26,15 @@ The Workspace Manager
 
 1.  Clone the repository:
     ```sh
-    git clone https://github.com/example/example.git
-    cd my_python_project
+    git clone https://github.com/CoReason-AI/coreason_foundry.git
+    cd coreason_foundry
     ```
 2.  Install dependencies:
     ```sh
     poetry install
     ```
 
-### Usage
+### Development
 
 -   Run the linter:
     ```sh
@@ -32,4 +43,8 @@ The Workspace Manager
 -   Run the tests:
     ```sh
     poetry run pytest
+    ```
+-   Build the documentation:
+    ```sh
+    poetry run mkdocs build
     ```
