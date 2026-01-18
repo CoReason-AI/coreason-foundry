@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coreason_foundry"
-version = "0.1.0"
+version = "0.2.0"
 description = "The Workspace Manager"
 authors = ["Gowtham A Rao <gowtham.rao@coreason.ai>"]
 license = "Prosperity-3.0"
@@ -40,7 +40,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "coreason_foundry"
-version = "0.1.0"
+version = "0.2.0"
 description = "The Workspace Manager"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -55,9 +55,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/CoReason-AI/coreason_foundry"
-Repository = "https://github.com/CoReason-AI/coreason_foundry"
-Documentation = "https://github.com/CoReason-AI/coreason_foundry"
+Homepage = "https://github.com/CoReason-AI/coreason-foundry"
+Repository = "https://github.com/CoReason-AI/coreason-foundry"
+Documentation = "https://github.com/CoReason-AI/coreason-foundry"
 
 [tool.ruff]
 line-length = 120
