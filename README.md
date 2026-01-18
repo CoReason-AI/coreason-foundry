@@ -2,12 +2,12 @@
 
 **The Collaborative Workspace Manager & Real-Time State Engine**
 
-[![CI](https://github.com/CoReason-AI/coreason_foundry/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/CoReason-AI/coreason_foundry/actions/workflows/ci-cd.yml)
-[![Docker](https://github.com/CoReason-AI/coreason_foundry/actions/workflows/docker.yml/badge.svg)](https://github.com/CoReason-AI/coreason_foundry/actions/workflows/docker.yml)
+[![CI](https://github.com/CoReason-AI/coreason-foundry/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/CoReason-AI/coreason-foundry/actions/workflows/ci-cd.yml)
+[![Docker](https://github.com/CoReason-AI/coreason-foundry/actions/workflows/docker.yml/badge.svg)](https://github.com/CoReason-AI/coreason-foundry/actions/workflows/docker.yml)
 [![PyPI - Version](https://img.shields.io/pypi/v/coreason_foundry.svg)](https://pypi.org/project/coreason_foundry)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/coreason_foundry.svg)](https://pypi.org/project/coreason_foundry)
-[![License](https://img.shields.io/badge/license-Prosperity--3.0-blue)](https://github.com/CoReason-AI/coreason_foundry/blob/main/LICENSE)
-[![codecov](https://codecov.io/gh/CoReason-AI/coreason_foundry/graph/badge.svg)](https://codecov.io/gh/CoReason-AI/coreason_foundry)
+[![License](https://img.shields.io/badge/license-Prosperity--3.0-blue)](https://github.com/CoReason-AI/coreason-foundry/blob/main/LICENSE)
+[![codecov](https://codecov.io/gh/CoReason-AI/coreason-foundry/graph/badge.svg)](https://codecov.io/gh/CoReason-AI/coreason-foundry)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
@@ -33,8 +33,8 @@ Full documentation is available in the `docs/` directory and includes:
 
 1.  Clone the repository:
     ```sh
-    git clone https://github.com/CoReason-AI/coreason_foundry.git
-    cd coreason_foundry
+    git clone https://github.com/CoReason-AI/coreason-foundry.git
+    cd coreason-foundry
     ```
 2.  Install dependencies:
     ```sh
