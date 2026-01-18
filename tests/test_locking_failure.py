@@ -9,7 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 import uuid
-from unittest.mock import MagicMock
+from typing import Any
 
 import pytest
 from fakeredis import FakeAsyncRedis
@@ -30,24 +30,14 @@ async def test_lock_release_lua_exception() -> None:
     user_id = uuid.uuid4()
 
     # Mock eval to raise Exception
-    # Note: fakeredis methods are async, but mocking side_effect on async methods
-    # requires setting the side_effect to an exception directly if it's awaitable?
-    # No, for async mocks, side_effect=Exception works if called with await.
-    # However, RedisLockRegistry calls self.redis.eval.
-    # We need to ensure we mock the instance method correctly.
-
     # Since we passed fake_redis instance, we can mock its eval method.
     # But fake_redis.eval is an async method.
 
-    original_eval = fake_redis.eval
-
-    async def mock_eval(*args, **kwargs):
+    async def mock_eval(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("Lua Script Failed")
 
-    fake_redis.eval = mock_eval  # type: ignore
+    fake_redis.eval = mock_eval
 
     result = await registry.release(project_id, field, user_id)
 
     assert result is False
-
-    # Restore (though fixture isolation usually handles this if we used a fixture, here we created locally)
