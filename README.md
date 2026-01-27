@@ -21,6 +21,7 @@ Full documentation is available in the `docs/` directory and includes:
 -   [**Architecture**](docs/architecture.md)
 -   [**Usage Guide**](docs/usage.md)
 -   [**Vignette**](docs/vignette.md)
+-   [**Requirements**](requirements.md)
 
 ## Getting Started
 
