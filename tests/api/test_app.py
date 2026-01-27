@@ -17,13 +17,13 @@ from coreason_foundry.api.app import app
 
 
 @pytest.mark.asyncio
-async def test_app_lifespan():
+async def test_app_lifespan() -> None:
     # Mock get_redis_client to verify close is called
     with patch("coreason_foundry.api.app.get_redis_client") as mock_get_redis:
         mock_redis = AsyncMock()
         mock_get_redis.return_value = mock_redis
 
-        with TestClient(app) as client:
+        with TestClient(app):
             # Trigger startup
             pass
 

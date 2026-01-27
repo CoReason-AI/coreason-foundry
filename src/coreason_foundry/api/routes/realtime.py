@@ -36,10 +36,7 @@ async def websocket_endpoint(
     await presence.add_user(project_id, user_id)
 
     try:
-        await manager.broadcast(
-            project_id,
-            {"type": "USER_JOINED", "user_id": str(user_id)}
-        )
+        await manager.broadcast(project_id, {"type": "USER_JOINED", "user_id": str(user_id)})
 
         while True:
             # Keep connection alive and listen for messages
@@ -51,7 +48,4 @@ async def websocket_endpoint(
     finally:
         await presence.remove_user(project_id, user_id)
         manager.disconnect(project_id, websocket)
-        await manager.broadcast(
-            project_id,
-            {"type": "USER_LEFT", "user_id": str(user_id)}
-        )
+        await manager.broadcast(project_id, {"type": "USER_LEFT", "user_id": str(user_id)})

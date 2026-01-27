@@ -9,7 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 from collections import defaultdict
-from typing import Dict, List
+from typing import Any, Dict, List
 from uuid import UUID
 
 from starlette.websockets import WebSocket
@@ -46,7 +46,7 @@ class ConnectionManager:
             if len(self.active_connections[project_id]) == 0:
                 del self.active_connections[project_id]
 
-    async def broadcast(self, project_id: UUID, message: dict) -> None:
+    async def broadcast(self, project_id: UUID, message: Dict[str, Any]) -> None:
         """
         Sends a JSON message to all active sockets in the project group.
         """

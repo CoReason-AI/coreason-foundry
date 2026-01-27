@@ -8,15 +8,16 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 from uuid import uuid4
+
+import pytest
 
 from coreason_foundry.api.websockets import ConnectionManager
 
 
 @pytest.mark.asyncio
-async def test_connection_manager_connect():
+async def test_connection_manager_connect() -> None:
     manager = ConnectionManager()
     project_id = uuid4()
     mock_ws = AsyncMock()
@@ -28,7 +29,7 @@ async def test_connection_manager_connect():
 
 
 @pytest.mark.asyncio
-async def test_connection_manager_disconnect():
+async def test_connection_manager_disconnect() -> None:
     manager = ConnectionManager()
     project_id = uuid4()
     mock_ws = AsyncMock()
@@ -45,7 +46,7 @@ async def test_connection_manager_disconnect():
 
 
 @pytest.mark.asyncio
-async def test_connection_manager_broadcast():
+async def test_connection_manager_broadcast() -> None:
     manager = ConnectionManager()
     project_id = uuid4()
     mock_ws1 = AsyncMock()
@@ -61,7 +62,7 @@ async def test_connection_manager_broadcast():
 
 
 @pytest.mark.asyncio
-async def test_connection_manager_broadcast_error_handling():
+async def test_connection_manager_broadcast_error_handling() -> None:
     manager = ConnectionManager()
     project_id = uuid4()
     mock_ws = AsyncMock()

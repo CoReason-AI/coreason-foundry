@@ -16,7 +16,7 @@ from fastapi import Depends, Header, HTTPException, status
 from redis.asyncio import Redis
 
 from coreason_foundry.api.websockets import ConnectionManager
-from coreason_foundry.config import Settings, get_settings
+from coreason_foundry.config import get_settings
 from coreason_foundry.interfaces import DraftRepository, PresenceRegistry, ProjectRepository, UnitOfWork
 from coreason_foundry.managers import (
     DraftManager,

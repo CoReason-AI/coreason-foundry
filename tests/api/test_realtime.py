@@ -8,34 +8,33 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-from uuid import uuid4
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from fakeredis.aioredis import FakeRedis
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
 
 from coreason_foundry.api.dependencies import get_redis_client
 from coreason_foundry.api.routes import realtime
 
 
 @pytest.fixture
-def app():
+def app() -> FastAPI:
     app = FastAPI()
     app.include_router(realtime.router)
     return app
 
 
 @pytest.fixture
-def client(app):
+def client(app: FastAPI) -> TestClient:
     fake_redis = FakeRedis(decode_responses=True)
     app.dependency_overrides[get_redis_client] = lambda: fake_redis
     return TestClient(app)
 
 
-def test_websocket_connection(client):
+def test_websocket_connection(client: TestClient) -> None:
     project_id = uuid4()
     user_id = uuid4()
 
@@ -46,7 +45,7 @@ def test_websocket_connection(client):
         assert data["user_id"] == str(user_id)
 
 
-def test_websocket_broadcast(client):
+def test_websocket_broadcast(client: TestClient) -> None:
     project_id = uuid4()
     user1 = uuid4()
     user2 = uuid4()
@@ -74,7 +73,7 @@ def test_websocket_broadcast(client):
         assert data["user_id"] == str(user2)
 
 
-def test_websocket_generic_error(client):
+def test_websocket_generic_error(client: TestClient) -> None:
     project_id = uuid4()
     user_id = uuid4()
 
