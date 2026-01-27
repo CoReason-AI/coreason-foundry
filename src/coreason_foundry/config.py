@@ -8,12 +8,17 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-"""
-The Workspace Manager
-"""
+from functools import lru_cache
 
-__version__ = "0.3.1"
-__author__ = "Gowtham A Rao"
-__email__ = "gowtham.rao@coreason.ai"
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-__all__: list[str] = []
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="APP_", extra="ignore")
+
+    REDIS_URL: str = "redis://localhost:6379"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

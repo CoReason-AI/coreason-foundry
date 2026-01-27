@@ -8,9 +8,25 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
 
-from coreason_foundry.api.routes import drafts, projects
+from coreason_foundry.api.dependencies import get_redis_client
+from coreason_foundry.api.routes import drafts, projects, realtime
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Manage application lifespan.
+    """
+    # Startup
+    yield
+    # Shutdown
+    redis = get_redis_client()
+    await redis.close()
 
 
 def create_app() -> FastAPI:
@@ -23,10 +39,12 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     app.include_router(projects.router)
     app.include_router(drafts.router)
+    app.include_router(realtime.router)
 
     return app
 
