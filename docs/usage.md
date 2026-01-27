@@ -1,6 +1,6 @@
 # Usage Guide
 
-This guide provides instructions and examples for using the `coreason-foundry` package.
+This guide provides instructions and examples for using the `coreason-foundry` package (v0.3.0).
 
 ## Installation
 
