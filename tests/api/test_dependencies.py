@@ -13,18 +13,24 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
+from redis.asyncio import Redis
 
 from coreason_foundry.api.dependencies import (
+    get_connection_manager,
     get_current_user_id,
     get_draft_manager,
     get_draft_repository,
+    get_presence_registry,
     get_project_manager,
     get_project_repository,
+    get_redis_client,
     get_unit_of_work,
 )
+from coreason_foundry.api.websockets import ConnectionManager
 from coreason_foundry.interfaces import DraftRepository, ProjectRepository, UnitOfWork
 from coreason_foundry.managers import DraftManager, ProjectManager
 from coreason_foundry.memory import InMemoryDraftRepository, InMemoryProjectRepository
+from coreason_foundry.presence import RedisPresenceRegistry
 
 
 def test_get_current_user_id_success() -> None:
@@ -77,3 +83,26 @@ def test_get_draft_manager() -> None:
     manager = get_draft_manager(uow)
     assert isinstance(manager, DraftManager)
     assert manager.uow is uow
+
+
+def test_get_redis_client() -> None:
+    client = get_redis_client()
+    assert isinstance(client, Redis)
+    # Check singleton behavior if using lru_cache
+    client2 = get_redis_client()
+    assert client is client2
+
+
+def test_get_presence_registry() -> None:
+    client = MagicMock(spec=Redis)
+    registry = get_presence_registry(client)
+    assert isinstance(registry, RedisPresenceRegistry)
+    assert registry.redis is client
+
+
+def test_get_connection_manager() -> None:
+    manager = get_connection_manager()
+    assert isinstance(manager, ConnectionManager)
+    # Singleton check
+    manager2 = get_connection_manager()
+    assert manager is manager2
