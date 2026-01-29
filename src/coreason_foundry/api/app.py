@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Shutdown
     redis = get_redis_client()
-    await redis.close()
+    await redis.aclose()
 
 
 def create_app() -> FastAPI:
@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="CoReason Foundry API",
         description="The Collaborative Workspace Manager & Real-Time State Engine",
-        version="0.1.0",
+        version="0.4.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,

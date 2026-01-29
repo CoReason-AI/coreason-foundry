@@ -28,4 +28,4 @@ async def test_app_lifespan() -> None:
             pass
 
         # Trigger shutdown
-        mock_redis.close.assert_called_once()
+        mock_redis.aclose.assert_called_once()
