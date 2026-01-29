@@ -1,6 +1,6 @@
 # Usage Guide
 
-This guide provides instructions and examples for using the `coreason-foundry` package (v0.3.0).
+This guide provides instructions and examples for using the `coreason-foundry` package (v0.4.0).
 
 ## Installation
 
@@ -137,4 +137,60 @@ async def locking_example():
     # 5. User A releases lock
     await lock_registry.release(project_id, field, user_a)
     print("User A released lock")
+```
+
+## Real-Time Collaboration (WebSockets)
+
+To enable real-time collaboration features (Presence and Event Broadcasting), clients should connect to the WebSocket Gateway.
+
+### Connecting
+
+Connect to the WebSocket endpoint for a specific project. You must provide a `user_id` as a query parameter.
+
+**Endpoint:** `ws://<host>:<port>/ws/projects/{project_id}?user_id={user_id}`
+
+### Protocol
+
+The server broadcasts JSON messages to all connected clients in the project room.
+
+**Event Types:**
+
+*   `USER_JOINED`: Sent when a new user connects to the project.
+    ```json
+    {
+      "type": "USER_JOINED",
+      "user_id": "uuid-string"
+    }
+    ```
+*   `USER_LEFT`: Sent when a user disconnects.
+    ```json
+    {
+      "type": "USER_LEFT",
+      "user_id": "uuid-string"
+    }
+    ```
+
+### Example Client (Python)
+
+```python
+import asyncio
+import websockets
+import json
+from uuid import uuid4
+
+async def websocket_client():
+    project_id = uuid4()
+    user_id = uuid4()
+    uri = f"ws://localhost:8000/ws/projects/{project_id}?user_id={user_id}"
+
+    async with websockets.connect(uri) as websocket:
+        print(f"Connected as {user_id}")
+
+        while True:
+            message = await websocket.recv()
+            data = json.loads(message)
+            print(f"Received: {data}")
+
+if __name__ == "__main__":
+    asyncio.run(websocket_client())
 ```
