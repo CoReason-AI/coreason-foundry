@@ -100,7 +100,7 @@ async def test_redis_presence_registry() -> None:
     assert len(users) == 0
 
     # Teardown
-    await fake_redis.close()
+    await fake_redis.aclose()
 
 
 @pytest.mark.asyncio
@@ -121,4 +121,4 @@ async def test_redis_presence_registry_corruption() -> None:
     users = await registry.get_present_users(project_id)
     assert len(users) == 1  # Should only contain the valid UUID
 
-    await fake_redis.close()
+    await fake_redis.aclose()

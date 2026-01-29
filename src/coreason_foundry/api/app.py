@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Shutdown
     redis = get_redis_client()
-    await redis.close()
+    await redis.aclose()
 
 
 def create_app() -> FastAPI:
