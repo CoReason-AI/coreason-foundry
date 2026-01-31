@@ -80,7 +80,7 @@ def test_get_draft_manager() -> None:
     uow = MagicMock(spec=UnitOfWork)
     uow.projects = MagicMock(spec=ProjectRepository)
     uow.drafts = MagicMock(spec=DraftRepository)
-    manager = get_draft_manager(uow)
+    manager = get_draft_manager(uow, llm_client=None)
     assert isinstance(manager, DraftManager)
     assert manager.uow is uow
 

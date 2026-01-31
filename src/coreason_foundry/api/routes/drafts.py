@@ -14,7 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from coreason_foundry.api.dependencies import get_current_user_id, get_draft_manager
-from coreason_foundry.api.schemas import DraftCreate, DraftDiff, DraftRead
+from coreason_foundry.api.schemas import DraftCreate, DraftDiff, DraftRead, OptimizationRequest
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.managers import DraftManager
 
@@ -115,3 +115,35 @@ async def get_draft(
         author_id=draft.author_id,
         created_at=draft.created_at,
     )
+
+
+@router.post("/drafts/{draft_id}/optimize", response_model=DraftRead, status_code=status.HTTP_201_CREATED)
+async def optimize_draft(
+    draft_id: UUID,
+    request: OptimizationRequest,
+    manager: Annotated[DraftManager, Depends(get_draft_manager)],
+    user_id: Annotated[UUID, Depends(get_current_user_id)],
+) -> DraftRead:
+    """
+    Optimize an existing draft's prompt using provided examples.
+    Creates a new draft version.
+    """
+    try:
+        draft = await manager.optimize_draft(draft_id, request, user_id)
+        return DraftRead(
+            id=draft.id,
+            project_id=draft.project_id,
+            version_number=draft.version_number,
+            prompt_text=draft.prompt_text,
+            model_configuration=draft.model_configuration,
+            scratchpad=draft.scratchpad,
+            author_id=draft.author_id,
+            created_at=draft.created_at,
+        )
+    except ValueError as e:
+        # e.g. Draft not found
+        if "not found" in str(e):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
