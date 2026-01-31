@@ -31,6 +31,12 @@ async def websocket_endpoint(
 ) -> None:
     """
     WebSocket endpoint for real-time collaboration.
+
+    Lifecycle:
+    1. Connect & Add to Presence.
+    2. Broadcast USER_JOINED.
+    3. Loop waiting for messages.
+    4. On Disconnect: Remove from Presence, Disconnect, Broadcast USER_LEFT.
     """
     await manager.connect(project_id, websocket)
     await presence.add_user(project_id, user_id)

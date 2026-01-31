@@ -11,7 +11,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
-`coreason-foundry` is the interactive, stateful backend for the CoReason IDE. It bridges the gap between fleeting engineering thoughts and permanent GxP artifacts.
+`coreason-foundry` is the interactive, stateful backend for the CoReason IDE. It bridges the gap between fleeting engineering thoughts and permanent GxP artifacts. It now includes a **Real-Time WebSocket Gateway** for presence tracking and event broadcasting.
 
 ## Documentation
 

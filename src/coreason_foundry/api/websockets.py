@@ -20,6 +20,11 @@ from coreason_foundry.utils.logger import logger
 class ConnectionManager:
     """
     Manages active WebSocket connections grouped by project_id.
+
+    This manager handles:
+    - Connecting sockets and mapping them to projects.
+    - Disconnecting sockets and cleaning up empty project groups.
+    - Broadcasting messages to all sockets in a project.
     """
 
     def __init__(self) -> None:
