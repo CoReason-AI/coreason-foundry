@@ -12,6 +12,9 @@ import uuid
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import HTTPException
+from redis.asyncio import Redis
+
 from coreason_foundry.api.dependencies import (
     get_connection_manager,
     get_current_user_id,
@@ -28,8 +31,6 @@ from coreason_foundry.interfaces import DraftRepository, ProjectRepository, Unit
 from coreason_foundry.managers import DraftManager, ProjectManager
 from coreason_foundry.memory import InMemoryDraftRepository, InMemoryProjectRepository
 from coreason_foundry.presence import RedisPresenceRegistry
-from fastapi import HTTPException
-from redis.asyncio import Redis
 
 
 def test_get_current_user_id_success() -> None:

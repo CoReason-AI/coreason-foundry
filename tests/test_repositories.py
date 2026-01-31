@@ -13,11 +13,12 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from coreason_foundry.db.base import Base
 from coreason_foundry.managers import ProjectManager
 from coreason_foundry.models import Project
 from coreason_foundry.repositories import SqlAlchemyProjectRepository
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # Use sqlite+aiosqlite for in-memory testing of the SQLAlchemy repository
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

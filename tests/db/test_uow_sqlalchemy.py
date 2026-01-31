@@ -11,11 +11,12 @@
 import uuid
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from coreason_foundry.db.models import ProjectORM
 from coreason_foundry.models import Project
 from coreason_foundry.repositories import SqlAlchemyUnitOfWork
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

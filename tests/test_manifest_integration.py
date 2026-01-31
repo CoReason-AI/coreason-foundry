@@ -10,8 +10,9 @@
 
 from uuid import uuid4
 
-from coreason_foundry.models import Draft
 from coreason_manifest.definitions.agent import AgentDefinition
+
+from coreason_foundry.models import Draft
 
 
 def test_draft_to_manifest_conversion() -> None:

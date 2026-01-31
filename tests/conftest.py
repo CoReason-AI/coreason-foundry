@@ -11,10 +11,11 @@
 from typing import Any, AsyncGenerator
 
 import pytest_asyncio
-from coreason_foundry.db.base import Base
-from coreason_foundry.db.session import DatabaseSessionManager, DatabaseSettings
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from coreason_foundry.db.base import Base
+from coreason_foundry.db.session import DatabaseSessionManager, DatabaseSettings
 
 
 @pytest_asyncio.fixture(scope="function")

@@ -12,8 +12,9 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from coreason_foundry.models import Draft
 from pydantic import ValidationError
+
+from coreason_foundry.models import Draft
 
 
 def test_draft_creation() -> None:

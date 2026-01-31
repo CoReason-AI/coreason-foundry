@@ -11,11 +11,12 @@
 from typing import Annotated, List
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from coreason_foundry.api.dependencies import get_project_manager
 from coreason_foundry.api.schemas import ProjectCreate
 from coreason_foundry.managers import ProjectManager
 from coreason_foundry.models import Project
-from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 

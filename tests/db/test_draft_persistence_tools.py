@@ -12,10 +12,11 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from coreason_foundry.db.models import ProjectORM
 from coreason_foundry.models import Draft
 from coreason_foundry.repositories import SqlAlchemyDraftRepository
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
