@@ -10,6 +10,7 @@
 
 from coreason_foundry.utils.hashing import compute_agent_hash
 
+
 def test_hashing_consistency() -> None:
     data1 = {"a": 1, "b": 2}
     data2 = {"b": 2, "a": 1}
@@ -18,6 +19,7 @@ def test_hashing_consistency() -> None:
     hash2 = compute_agent_hash(data2)
 
     assert hash1 == hash2
+
 
 def test_hashing_nested() -> None:
     data1 = {"config": {"a": 1}, "list": [1, 2]}

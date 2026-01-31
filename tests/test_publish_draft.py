@@ -41,7 +41,7 @@ async def test_publish_draft_success() -> None:
         version_number=1,
         prompt_text="System Prompt",
         model_configuration={"temperature": 0.5},
-        author_id=uuid4()
+        author_id=uuid4(),
     )
 
     draft_repo.get.return_value = draft
@@ -92,11 +92,7 @@ async def test_publish_draft_project_not_found() -> None:
 
     project_id = uuid4()
     draft = Draft(
-        project_id=project_id,
-        version_number=1,
-        prompt_text="Prompt",
-        model_configuration={},
-        author_id=uuid4()
+        project_id=project_id, version_number=1, prompt_text="Prompt", model_configuration={}, author_id=uuid4()
     )
 
     draft_repo.get.return_value = draft

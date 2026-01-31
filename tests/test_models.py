@@ -89,7 +89,7 @@ def test_draft_to_manifest_conversion() -> None:
 
     # Verify LLM Config mapping
     assert manifest.config.llm_config.temperature == 0.7
-    assert manifest.config.llm_config.model == "gpt-4" # default
+    assert manifest.config.llm_config.model == "gpt-4"  # default
 
     # Verify Skeleton Topology
     assert len(manifest.config.nodes) == 1
