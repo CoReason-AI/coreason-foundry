@@ -12,12 +12,11 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from coreason_foundry.api.dependencies import get_redis_client
+from coreason_foundry.api.routes import realtime
 from fakeredis.aioredis import FakeRedis
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-from coreason_foundry.api.dependencies import get_redis_client
-from coreason_foundry.api.routes import realtime
 
 
 @pytest.fixture

@@ -11,7 +11,6 @@
 from uuid import uuid4
 
 import pytest
-
 from coreason_foundry.managers import ProjectManager
 from coreason_foundry.memory import InMemoryProjectRepository
 

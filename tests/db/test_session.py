@@ -11,7 +11,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from coreason_foundry.db.session import DatabaseSessionManager, DatabaseSettings
 
 

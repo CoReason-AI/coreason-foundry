@@ -12,9 +12,8 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
-
 from coreason_foundry.models import Comment
+from pydantic import ValidationError
 
 
 def test_comment_creation_success() -> None:

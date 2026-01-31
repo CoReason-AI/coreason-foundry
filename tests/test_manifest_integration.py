@@ -9,9 +9,10 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 from uuid import uuid4
-from datetime import datetime, timezone
+
 from coreason_foundry.models import Draft
 from coreason_manifest.definitions.agent import AgentDefinition
+
 
 def test_draft_to_manifest_conversion() -> None:
     """

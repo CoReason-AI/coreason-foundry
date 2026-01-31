@@ -12,9 +12,8 @@ import uuid
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
-
 from coreason_foundry.memory import GenericInMemoryRepository
+from pydantic import BaseModel
 
 
 class SimpleEntity(BaseModel):

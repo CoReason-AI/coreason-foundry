@@ -11,10 +11,9 @@
 from typing import Any, List, Optional
 
 import dspy
-from dspy.teleprompt import COPRO
-
 from coreason_foundry.api.schemas import OptimizationExample
 from coreason_foundry.utils.logger import logger
+from dspy.teleprompt import COPRO
 
 
 class PromptRefinery:

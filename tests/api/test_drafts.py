@@ -13,8 +13,6 @@ from typing import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-
 from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import (
     get_draft_repository,
@@ -26,6 +24,7 @@ from coreason_foundry.memory import (
     InMemoryProjectRepository,
     InMemoryUnitOfWork,
 )
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest_asyncio.fixture

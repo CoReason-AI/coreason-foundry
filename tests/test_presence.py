@@ -11,10 +11,9 @@
 from uuid import uuid4
 
 import pytest
-from fakeredis import FakeAsyncRedis
-
 from coreason_foundry.memory import InMemoryPresenceRegistry
 from coreason_foundry.presence import RedisPresenceRegistry
+from fakeredis import FakeAsyncRedis
 
 
 @pytest.mark.asyncio

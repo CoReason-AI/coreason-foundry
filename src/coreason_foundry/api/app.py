@@ -11,10 +11,9 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
-
 from coreason_foundry.api.dependencies import get_redis_client
 from coreason_foundry.api.routes import drafts, projects, realtime
+from fastapi import FastAPI
 
 
 @asynccontextmanager
