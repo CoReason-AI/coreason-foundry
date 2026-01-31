@@ -9,7 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -54,3 +54,22 @@ class DraftDiff(BaseModel):
     """
 
     diff: str
+
+
+class OptimizationExample(BaseModel):
+    """
+    An input/output pair used for optimizing the prompt.
+    """
+
+    input_text: str = Field(..., description="The input to the agent")
+    expected_output: str = Field(..., description="The expected output from the agent")
+
+
+class OptimizationRequest(BaseModel):
+    """
+    Request payload for optimizing a draft's prompt.
+    """
+
+    examples: List[OptimizationExample] = Field(..., min_length=3, description="A list of golden examples (min 3)")
+    iterations: int = Field(10, ge=1, description="Number of optimization iterations")
+    metric_description: Optional[str] = Field(None, description="Description of the optimization metric")
