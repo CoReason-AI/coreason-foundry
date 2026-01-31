@@ -11,10 +11,11 @@
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from coreason_foundry.memory import InMemoryCommentRepository
 from coreason_foundry.models import Comment
 from coreason_foundry.repositories import SqlAlchemyCommentRepository
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # Test Data

@@ -11,6 +11,7 @@
 from uuid import uuid4
 
 import pytest
+
 from coreason_foundry.managers import DraftManager
 from coreason_foundry.memory import InMemoryUnitOfWork
 from coreason_foundry.models import Project

@@ -11,6 +11,7 @@
 from uuid import uuid4
 
 import pytest
+
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.managers import DraftManager, ProjectManager
 from coreason_foundry.memory import InMemoryUnitOfWork

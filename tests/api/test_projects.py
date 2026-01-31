@@ -12,10 +12,11 @@ from typing import AsyncGenerator
 from uuid import uuid4
 
 import pytest
+from httpx import ASGITransport, AsyncClient
+
 from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import get_project_repository
 from coreason_foundry.memory import InMemoryProjectRepository
-from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture

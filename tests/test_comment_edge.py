@@ -12,6 +12,9 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from coreason_foundry.memory import InMemoryCommentRepository
 from coreason_foundry.models import Comment, Draft, Project
 from coreason_foundry.repositories import (
@@ -19,8 +22,6 @@ from coreason_foundry.repositories import (
     SqlAlchemyDraftRepository,
     SqlAlchemyProjectRepository,
 )
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 # --- Model Edge Cases ---
 

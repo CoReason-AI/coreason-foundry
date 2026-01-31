@@ -13,6 +13,8 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
+
 from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import get_current_user_id, get_draft_manager
 from coreason_foundry.api.schemas import OptimizationExample, OptimizationRequest
@@ -20,7 +22,6 @@ from coreason_foundry.managers import DraftManager
 from coreason_foundry.memory import InMemoryUnitOfWork
 from coreason_foundry.models import Project
 from coreason_foundry.services.refinery import PromptRefinery
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture

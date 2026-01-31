@@ -12,8 +12,9 @@ import uuid
 from typing import Any
 
 import pytest
-from coreason_foundry.locking import RedisLockRegistry
 from fakeredis import FakeAsyncRedis
+
+from coreason_foundry.locking import RedisLockRegistry
 
 
 @pytest.mark.asyncio

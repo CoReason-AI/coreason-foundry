@@ -12,8 +12,9 @@ from collections import defaultdict
 from typing import Any, Dict, List
 from uuid import UUID
 
-from coreason_foundry.utils.logger import logger
 from starlette.websockets import WebSocket
+
+from coreason_foundry.utils.logger import logger
 
 
 class ConnectionManager:
