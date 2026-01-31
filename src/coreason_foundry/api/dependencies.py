@@ -9,7 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, status
@@ -83,13 +83,22 @@ def get_project_manager(
     return ProjectManager(repository=repository)
 
 
+def get_llm_client() -> Any:
+    """
+    Returns the configured LLM client.
+    Currently returns None as no LLM is configured.
+    """
+    return None
+
+
 def get_draft_manager(
     uow: Annotated[UnitOfWork, Depends(get_unit_of_work)],
+    llm_client: Annotated[Any, Depends(get_llm_client)],
 ) -> DraftManager:
     """
-    Returns a DraftManager instance with injected UnitOfWork.
+    Returns a DraftManager instance with injected UnitOfWork and LLM client.
     """
-    return DraftManager(uow=uow)
+    return DraftManager(uow=uow, llm_client=llm_client)
 
 
 @lru_cache
