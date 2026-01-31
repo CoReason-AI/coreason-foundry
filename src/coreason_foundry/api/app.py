@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="CoReason Foundry API",
         description="The Collaborative Workspace Manager & Real-Time State Engine",
-        version="0.4.0",
+        version="0.5.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,

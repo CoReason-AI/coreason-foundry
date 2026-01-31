@@ -12,12 +12,14 @@ import difflib
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from coreason_foundry.api.schemas import OptimizationRequest
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.interfaces import (
     ProjectRepository,
     UnitOfWork,
 )
 from coreason_foundry.models import Draft, Project
+from coreason_foundry.services.refinery import PromptRefinery
 from coreason_foundry.utils.logger import logger
 
 
@@ -51,8 +53,9 @@ class DraftManager:
     Uses UnitOfWork for transactional integrity.
     """
 
-    def __init__(self, uow: UnitOfWork) -> None:
+    def __init__(self, uow: UnitOfWork, llm_client: Any = None) -> None:
         self.uow = uow
+        self.llm_client = llm_client
         # expose repositories for read-only convenience if needed,
         # but operations should go through UoW if transactional.
         # However, for 'compare_versions' (read-only), we can use uow.drafts.
@@ -133,3 +136,40 @@ class DraftManager:
         )
 
         return "".join(diff)
+
+    async def optimize_draft(self, draft_id: UUID, request: OptimizationRequest, user_id: UUID) -> Draft:
+        """
+        Optimizes a draft's prompt using provided examples.
+        Creates a new draft with the optimized prompt.
+        """
+        # 1. Retrieve the Draft
+        draft = await self.uow.drafts.get(draft_id)
+        if not draft:
+            raise ValueError(f"Draft {draft_id} not found.")
+
+        # 2. Optimize
+        refinery = PromptRefinery(llm_client=self.llm_client)
+        optimized_prompt = refinery.optimize(
+            current_prompt=draft.prompt_text,
+            examples=request.examples,
+            metric_description=request.metric_description,
+            iterations=request.iterations,
+        )
+
+        # 3. Create New Draft
+        scratchpad_note = f"Auto-optimized based on {len(request.examples)} examples. Iterations: {request.iterations}."
+        if request.metric_description:
+            scratchpad_note += f" Metric: {request.metric_description}"
+
+        if draft.scratchpad:
+            scratchpad_note = f"{draft.scratchpad}\n\n{scratchpad_note}"
+
+        logger.info(f"Optimized Draft {draft_id} -> Creating new version.")
+
+        return await self.create_draft(
+            project_id=draft.project_id,
+            prompt_text=optimized_prompt,
+            model_configuration=draft.model_configuration,
+            author_id=user_id,
+            scratchpad=scratchpad_note,
+        )
