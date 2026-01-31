@@ -296,3 +296,39 @@ def test_api_optimize_draft_bad_request(mock_dspy: Any) -> None:
 
     response = client.post(f"/drafts/{uuid4()}/optimize", json=payload)
     assert response.status_code == 400
+
+
+def test_api_optimize_draft_validation_error_examples(mock_dspy: Any) -> None:
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow=uow)
+    app.dependency_overrides[get_draft_manager] = lambda: manager
+    app.dependency_overrides[get_current_user_id] = lambda: uuid4()
+    client = TestClient(app)
+
+    # Less than 3 examples
+    payload = {
+        "examples": [
+            {"input_text": "i", "expected_output": "o"},
+            {"input_text": "i", "expected_output": "o"},
+        ]
+    }
+
+    response = client.post(f"/drafts/{uuid4()}/optimize", json=payload)
+    assert response.status_code == 422
+
+
+def test_api_optimize_draft_validation_error_iterations(mock_dspy: Any) -> None:
+    uow = InMemoryUnitOfWork()
+    manager = DraftManager(uow=uow)
+    app.dependency_overrides[get_draft_manager] = lambda: manager
+    app.dependency_overrides[get_current_user_id] = lambda: uuid4()
+    client = TestClient(app)
+
+    # Iterations < 1
+    payload = {
+        "examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)],
+        "iterations": 0,
+    }
+
+    response = client.post(f"/drafts/{uuid4()}/optimize", json=payload)
+    assert response.status_code == 422

@@ -71,5 +71,5 @@ class OptimizationRequest(BaseModel):
     """
 
     examples: List[OptimizationExample] = Field(..., min_length=3, description="A list of golden examples (min 3)")
-    iterations: int = Field(10, description="Number of optimization iterations")
+    iterations: int = Field(10, ge=1, description="Number of optimization iterations")
     metric_description: Optional[str] = Field(None, description="Description of the optimization metric")
