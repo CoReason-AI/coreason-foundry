@@ -27,6 +27,7 @@ def test_draft_creation() -> None:
         version_number=1,
         prompt_text="System prompt...",
         model_configuration=config,
+        tools=["https://example.com/tool"],
         author_id=author_id,
     )
 
@@ -37,6 +38,7 @@ def test_draft_creation() -> None:
     assert draft.version_number == 1
     assert draft.prompt_text == "System prompt..."
     assert draft.model_configuration == config
+    assert [str(t) for t in draft.tools] == ["https://example.com/tool"]
     assert draft.author_id == author_id
 
 

@@ -160,7 +160,10 @@ async def test_manager_optimize_draft(mock_dspy: Any, mock_copro: Any) -> None:
     await uow.projects.add(project)
 
     # Create Draft
-    draft = await manager.create_draft(project_id, "Original Prompt", {}, author_id, scratchpad="Old Note")
+    tools = ["https://example.com/tool"]
+    draft = await manager.create_draft(
+        project_id, "Original Prompt", {}, author_id, tools=tools, scratchpad="Old Note"
+    )
 
     # Mock Refinery behavior
     copro_instance = mock_copro.return_value
@@ -182,6 +185,7 @@ async def test_manager_optimize_draft(mock_dspy: Any, mock_copro: Any) -> None:
     # Verify
     assert new_draft.version_number == draft.version_number + 1
     assert new_draft.prompt_text == "Optimized Prompt"
+    assert [str(t) for t in new_draft.tools] == tools
     assert new_draft.scratchpad is not None
     assert "Auto-optimized" in new_draft.scratchpad
     assert "Old Note" in new_draft.scratchpad

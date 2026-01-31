@@ -35,6 +35,7 @@ async def test_create_first_draft() -> None:
         project_id=project.id,
         prompt_text="System prompt v1",
         model_configuration={"temperature": 0.7},
+        tools=["https://example.com/tool"],
         author_id=author_id,
     )
 
@@ -42,6 +43,7 @@ async def test_create_first_draft() -> None:
     assert draft.version_number == 1
     assert draft.project_id == project.id
     assert draft.prompt_text == "System prompt v1"
+    assert [str(t) for t in draft.tools] == ["https://example.com/tool"]
     assert draft.author_id == author_id
 
     # Verify Project Update

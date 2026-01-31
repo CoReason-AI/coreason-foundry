@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from coreason_manifest.definitions.agent import StrictUri
 from pydantic import BaseModel, Field
 
 
@@ -30,6 +31,7 @@ class DraftCreate(BaseModel):
 
     prompt_text: str = Field(..., description="The prompt text for the agent")
     model_configuration: Dict[str, Any] = Field(..., description="Configuration parameters for the model")
+    tools: List[StrictUri] = Field(default_factory=list, description="List of tool URIs")
     scratchpad: Optional[str] = Field(None, description="Engineering notes or scratchpad content")
 
 
@@ -43,6 +45,7 @@ class DraftRead(BaseModel):
     version_number: int
     prompt_text: str
     model_configuration: Dict[str, Any]
+    tools: List[StrictUri]
     scratchpad: Optional[str]
     author_id: UUID
     created_at: datetime

@@ -12,6 +12,8 @@ import difflib
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from coreason_manifest.definitions.agent import StrictUri
+
 from coreason_foundry.api.schemas import OptimizationRequest
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.interfaces import (
@@ -69,6 +71,7 @@ class DraftManager:
         prompt_text: str,
         model_configuration: Dict[str, Any],
         author_id: UUID,
+        tools: Optional[List[StrictUri]] = None,
         scratchpad: Optional[str] = None,
     ) -> Draft:
         """
@@ -97,6 +100,7 @@ class DraftManager:
                 version_number=new_version,
                 prompt_text=prompt_text,
                 model_configuration=model_configuration,
+                tools=tools or [],
                 scratchpad=scratchpad,
                 author_id=author_id,
             )
@@ -170,6 +174,7 @@ class DraftManager:
             project_id=draft.project_id,
             prompt_text=optimized_prompt,
             model_configuration=draft.model_configuration,
+            tools=draft.tools,
             author_id=user_id,
             scratchpad=scratchpad_note,
         )
