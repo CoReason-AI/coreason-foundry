@@ -8,13 +8,12 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import dspy
-from dspy.teleprompt import COPRO
-
 from coreason_foundry.api.schemas import OptimizationExample
 from coreason_foundry.utils.logger import logger
+from dspy.teleprompt import COPRO
 
 
 class PromptRefinery:
@@ -22,7 +21,7 @@ class PromptRefinery:
     Service for optimizing agent prompts using DSPy.
     """
 
-    def __init__(self, llm_client=None):
+    def __init__(self, llm_client: Any = None) -> None:
         self.llm_client = llm_client
 
     def optimize(
@@ -49,11 +48,11 @@ class PromptRefinery:
 
         # 2. Define the Agent Module
         class AgentModule(dspy.Module):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__()
                 self.prog = dspy.Predict(Signature)
 
-            def forward(self, input_text):
+            def forward(self, input_text: str) -> Any:
                 return self.prog(input_text=input_text)
 
         # 3. Create Trainset
@@ -65,8 +64,8 @@ class PromptRefinery:
         # 4. Define Metric
         # We compare the 'prediction' field which we defined in the signature/examples.
         # Note: dspy.evaluate.answer_exact_match expects 'answer' field, so we implement custom logic.
-        def simple_metric(example, pred, trace=None):
-            return example.prediction == pred.prediction
+        def simple_metric(example: Any, pred: Any, trace: Any = None) -> bool:
+            return bool(example.prediction == pred.prediction)
 
         # 5. Run Optimization (COPRO)
         try:
@@ -90,9 +89,9 @@ class PromptRefinery:
                 # The compiled module contains the best predictor found.
                 optimized_instruction = compiled_module.prog.signature.instructions
                 logger.info("Optimization successful.")
-                return optimized_instruction
+                return str(optimized_instruction)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Optimization failed. Returning original prompt.")
             # In case of failure, preserve the original intent (Glass Box strategy fallback)
             return current_prompt

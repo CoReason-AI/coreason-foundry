@@ -11,12 +11,11 @@
 import uuid
 
 import pytest
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from coreason_foundry.db.models import ProjectORM
 from coreason_foundry.models import Draft
 from coreason_foundry.repositories import SqlAlchemyDraftRepository
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

@@ -13,10 +13,6 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import event, select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from coreason_foundry.db.base import Base
 from coreason_foundry.db.models import DraftORM
 from coreason_foundry.db.session import DatabaseSessionManager, DatabaseSettings
@@ -26,6 +22,9 @@ from coreason_foundry.repositories import (
     SqlAlchemyDraftRepository,
     SqlAlchemyProjectRepository,
 )
+from sqlalchemy import event, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

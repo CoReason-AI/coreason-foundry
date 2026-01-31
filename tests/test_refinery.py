@@ -8,22 +8,23 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_foundry
 
-import pytest
+from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
-
+import pytest
 from coreason_foundry.api.app import app
 from coreason_foundry.api.dependencies import get_current_user_id, get_draft_manager
 from coreason_foundry.api.schemas import OptimizationExample, OptimizationRequest
-from coreason_foundry.services.refinery import PromptRefinery
 from coreason_foundry.managers import DraftManager
 from coreason_foundry.memory import InMemoryUnitOfWork
-from coreason_foundry.models import Draft, Project
+from coreason_foundry.models import Project
+from coreason_foundry.services.refinery import PromptRefinery
+from fastapi.testclient import TestClient
+
 
 @pytest.fixture
-def mock_dspy():
+def mock_dspy() -> Any:
     with patch("coreason_foundry.services.refinery.dspy") as mock:
         # Mock context
         mock.context = MagicMock()
@@ -34,8 +35,9 @@ def mock_dspy():
 
         # Define a real class for Module to support inheritance and method execution in tests
         class MockModule:
-            def __init__(self):
+            def __init__(self) -> None:
                 pass
+
         mock.Module = MockModule
 
         # Mock Predict
@@ -46,12 +48,14 @@ def mock_dspy():
 
         yield mock
 
+
 @pytest.fixture
-def mock_copro():
+def mock_copro() -> Any:
     with patch("coreason_foundry.services.refinery.COPRO") as mock:
         yield mock
 
-def test_prompt_refinery_optimize(mock_dspy, mock_copro):
+
+def test_prompt_refinery_optimize(mock_dspy: Any, mock_copro: Any) -> None:
     # Setup
     refinery = PromptRefinery(llm_client="dummy")
     examples = [OptimizationExample(input_text="i", expected_output="o")]
@@ -72,7 +76,8 @@ def test_prompt_refinery_optimize(mock_dspy, mock_copro):
     mock_copro.assert_called()
     copro_instance.compile.assert_called()
 
-def test_prompt_refinery_optimize_failure(mock_dspy, mock_copro):
+
+def test_prompt_refinery_optimize_failure(mock_dspy: Any, mock_copro: Any) -> None:
     # Setup
     refinery = PromptRefinery()
     examples = [OptimizationExample(input_text="i", expected_output="o")]
@@ -86,7 +91,8 @@ def test_prompt_refinery_optimize_failure(mock_dspy, mock_copro):
     # Verify fallback
     assert result == "Original Prompt"
 
-def test_prompt_refinery_metric(mock_dspy, mock_copro):
+
+def test_prompt_refinery_metric(mock_dspy: Any, mock_copro: Any) -> None:
     refinery = PromptRefinery()
     examples = [OptimizationExample(input_text="i", expected_output="o")]
 
@@ -96,7 +102,7 @@ def test_prompt_refinery_metric(mock_dspy, mock_copro):
     # Get the metric function
     # call_args is (args, kwargs)
     call_args = mock_copro.call_args
-    metric_fn = call_args.kwargs['metric']
+    metric_fn = call_args.kwargs["metric"]
 
     # Test the metric function
     # We compare .prediction attributes
@@ -112,7 +118,8 @@ def test_prompt_refinery_metric(mock_dspy, mock_copro):
     res = metric_fn(ex, pred)
     assert res is False
 
-def test_prompt_refinery_agent_module(mock_dspy, mock_copro):
+
+def test_prompt_refinery_agent_module(mock_dspy: Any, mock_copro: Any) -> None:
     refinery = PromptRefinery()
     examples = [OptimizationExample(input_text="i", expected_output="o")]
 
@@ -136,8 +143,9 @@ def test_prompt_refinery_agent_module(mock_dspy, mock_copro):
         assert res == "prediction"
         module_instance.prog.assert_called_with(input_text="test_input")
 
+
 @pytest.mark.asyncio
-async def test_manager_optimize_draft(mock_dspy, mock_copro):
+async def test_manager_optimize_draft(mock_dspy: Any, mock_copro: Any) -> None:
     # Setup
     uow = InMemoryUnitOfWork()
     manager = DraftManager(uow=uow, llm_client="dummy")
@@ -164,15 +172,16 @@ async def test_manager_optimize_draft(mock_dspy, mock_copro):
         examples=[
             OptimizationExample(input_text="i", expected_output="o"),
             OptimizationExample(input_text="i2", expected_output="o2"),
-            OptimizationExample(input_text="i3", expected_output="o3")
+            OptimizationExample(input_text="i3", expected_output="o3"),
         ],
-        metric_description="Use brevity"
+        metric_description="Use brevity",
     )
     new_draft = await manager.optimize_draft(draft.id, req, author_id)
 
     # Verify
     assert new_draft.version_number == draft.version_number + 1
     assert new_draft.prompt_text == "Optimized Prompt"
+    assert new_draft.scratchpad is not None
     assert "Auto-optimized" in new_draft.scratchpad
     assert "Old Note" in new_draft.scratchpad
     assert "Metric: Use brevity" in new_draft.scratchpad
@@ -180,10 +189,12 @@ async def test_manager_optimize_draft(mock_dspy, mock_copro):
 
     # Check project pointer updated
     updated_project = await uow.projects.get(project_id)
+    assert updated_project
     assert updated_project.current_draft_id == new_draft.id
 
+
 @pytest.mark.asyncio
-async def test_manager_optimize_draft_not_found(mock_dspy):
+async def test_manager_optimize_draft_not_found(mock_dspy: Any) -> None:
     uow = InMemoryUnitOfWork()
     manager = DraftManager(uow=uow)
     examples = [
@@ -196,8 +207,9 @@ async def test_manager_optimize_draft_not_found(mock_dspy):
     with pytest.raises(ValueError, match="not found"):
         await manager.optimize_draft(uuid4(), req, uuid4())
 
+
 @pytest.mark.asyncio
-async def test_api_optimize_draft(mock_dspy, mock_copro):
+async def test_api_optimize_draft(mock_dspy: Any, mock_copro: Any) -> None:
     uow = InMemoryUnitOfWork()
     manager = DraftManager(uow=uow)
     app.dependency_overrides[get_draft_manager] = lambda: manager
@@ -220,9 +232,9 @@ async def test_api_optimize_draft(mock_dspy, mock_copro):
         "examples": [
             {"input_text": "i", "expected_output": "o"},
             {"input_text": "i", "expected_output": "o"},
-            {"input_text": "i", "expected_output": "o"}
+            {"input_text": "i", "expected_output": "o"},
         ],
-        "metric_description": "API Test"
+        "metric_description": "API Test",
     }
 
     response = client.post(f"/drafts/{draft.id}/optimize", json=payload)
@@ -232,53 +244,54 @@ async def test_api_optimize_draft(mock_dspy, mock_copro):
     assert data["prompt_text"] == "API Optimized"
     assert "Metric: API Test" in data["scratchpad"]
 
-def test_api_optimize_draft_not_found(mock_dspy):
+
+def test_api_optimize_draft_not_found(mock_dspy: Any) -> None:
     uow = InMemoryUnitOfWork()
     manager = DraftManager(uow=uow)
     app.dependency_overrides[get_draft_manager] = lambda: manager
     app.dependency_overrides[get_current_user_id] = lambda: uuid4()
     client = TestClient(app)
 
-    payload = {
-        "examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)]
-    }
+    payload = {"examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)]}
 
     response = client.post(f"/drafts/{uuid4()}/optimize", json=payload)
     assert response.status_code == 404
 
-def test_api_optimize_draft_generic_error(mock_dspy):
+
+def test_api_optimize_draft_generic_error(mock_dspy: Any) -> None:
     # Simulate internal error
     manager = MagicMock()
+
     # Need to make optimize_draft async
-    async def side_effect(*args, **kwargs):
+    async def side_effect(*args: Any, **kwargs: Any) -> None:
         raise Exception("Internal Fail")
+
     manager.optimize_draft.side_effect = side_effect
 
     app.dependency_overrides[get_draft_manager] = lambda: manager
     app.dependency_overrides[get_current_user_id] = lambda: uuid4()
     client = TestClient(app)
 
-    payload = {
-        "examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)]
-    }
+    payload = {"examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)]}
 
     response = client.post(f"/drafts/{uuid4()}/optimize", json=payload)
     assert response.status_code == 500
 
-def test_api_optimize_draft_bad_request(mock_dspy):
+
+def test_api_optimize_draft_bad_request(mock_dspy: Any) -> None:
     manager = MagicMock()
+
     # Need to make optimize_draft async
-    async def side_effect(*args, **kwargs):
+    async def side_effect(*args: Any, **kwargs: Any) -> None:
         raise ValueError("Some other error")
+
     manager.optimize_draft.side_effect = side_effect
 
     app.dependency_overrides[get_draft_manager] = lambda: manager
     app.dependency_overrides[get_current_user_id] = lambda: uuid4()
     client = TestClient(app)
 
-    payload = {
-        "examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)]
-    }
+    payload = {"examples": [{"input_text": "i", "expected_output": "o"} for _ in range(3)]}
 
     response = client.post(f"/drafts/{uuid4()}/optimize", json=payload)
     assert response.status_code == 400

@@ -11,9 +11,8 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-
 from coreason_foundry.api.app import app
+from fastapi.testclient import TestClient
 
 
 @pytest.mark.asyncio

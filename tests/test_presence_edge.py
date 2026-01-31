@@ -13,10 +13,9 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from coreason_foundry.presence import RedisPresenceRegistry
 from fakeredis import FakeAsyncRedis
 from redis.exceptions import ConnectionError
-
-from coreason_foundry.presence import RedisPresenceRegistry
 
 
 @pytest.mark.asyncio

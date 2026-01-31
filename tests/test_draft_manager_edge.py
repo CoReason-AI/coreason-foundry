@@ -12,7 +12,6 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-
 from coreason_foundry.managers import DraftManager, ProjectManager
 from coreason_foundry.memory import InMemoryUnitOfWork
 from coreason_foundry.models import Draft, Project

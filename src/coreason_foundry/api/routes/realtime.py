@@ -11,12 +11,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
-
 from coreason_foundry.api.dependencies import get_connection_manager, get_presence_registry
 from coreason_foundry.api.websockets import ConnectionManager
 from coreason_foundry.interfaces import PresenceRegistry
 from coreason_foundry.utils.logger import logger
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
 router = APIRouter()
 

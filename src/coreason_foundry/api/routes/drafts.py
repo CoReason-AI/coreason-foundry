@@ -11,12 +11,11 @@
 from typing import Annotated, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-
 from coreason_foundry.api.dependencies import get_current_user_id, get_draft_manager
 from coreason_foundry.api.schemas import DraftCreate, DraftDiff, DraftRead, OptimizationRequest
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.managers import DraftManager
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 router = APIRouter(tags=["drafts"])
 

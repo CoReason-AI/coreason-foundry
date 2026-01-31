@@ -12,9 +12,6 @@ from functools import lru_cache
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Depends, Header, HTTPException, status
-from redis.asyncio import Redis
-
 from coreason_foundry.api.websockets import ConnectionManager
 from coreason_foundry.config import get_settings
 from coreason_foundry.interfaces import DraftRepository, PresenceRegistry, ProjectRepository, UnitOfWork
@@ -26,6 +23,8 @@ from coreason_foundry.memory import (
     InMemoryUnitOfWork,
 )
 from coreason_foundry.presence import RedisPresenceRegistry
+from fastapi import Depends, Header, HTTPException, status
+from redis.asyncio import Redis
 
 
 def get_current_user_id(x_user_id: Annotated[str | None, Header()] = None) -> UUID:
