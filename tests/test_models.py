@@ -12,6 +12,7 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
+from coreason_manifest.definitions.agent import AgentDefinition
 from pydantic import ValidationError
 
 from coreason_foundry.models import Draft
@@ -56,3 +57,84 @@ def test_draft_config_flexibility() -> None:
         author_id=uuid4(),
     )
     assert draft.model_configuration["nested"]["key"] == "value"
+
+
+def test_draft_to_manifest_conversion() -> None:
+    project_id = uuid4()
+    author_id = uuid4()
+    config = {
+        "temperature": 0.7,
+        "tools": [
+            {
+                "name": "search",
+                "description": "Search the web",
+                "parameters": {"type": "object"},
+            }
+        ],
+    }
+
+    draft = Draft(
+        project_id=project_id,
+        version_number=1,
+        prompt_text="You are a helpful assistant.",
+        model_configuration=config,
+        author_id=author_id,
+    )
+
+    manifest = draft.to_manifest(project_name="Test Project")
+
+    assert isinstance(manifest, AgentDefinition)
+    assert manifest.metadata.name == "Test Project"
+    assert manifest.metadata.version == "0.0.1"
+
+    # Verify LLM Config mapping
+    assert manifest.config.llm_config.temperature == 0.7
+    assert manifest.config.llm_config.model == "gpt-4" # default
+
+    # Verify Skeleton Topology
+    assert len(manifest.config.nodes) == 1
+    assert manifest.config.nodes[0].id == "main"
+    assert manifest.config.nodes[0].type == "logic"
+
+    # Verify dependencies are empty (tools dropped due to schema limitation)
+    assert len(manifest.dependencies.tools) == 0
+
+    assert manifest.integrity_hash is not None
+
+
+def test_draft_to_manifest_no_tools() -> None:
+    project_id = uuid4()
+    author_id = uuid4()
+    config = {"temperature": 0.5, "model": "gpt-3.5-turbo"}
+
+    draft = Draft(
+        project_id=project_id,
+        version_number=2,
+        prompt_text="Prompt",
+        model_configuration=config,
+        author_id=author_id,
+    )
+
+    manifest = draft.to_manifest(project_name="Test Project")
+    assert manifest.metadata.version == "0.0.2"
+    assert manifest.config.llm_config.model == "gpt-3.5-turbo"
+    assert manifest.config.llm_config.temperature == 0.5
+
+
+def test_draft_to_manifest_invalid_temperature() -> None:
+    project_id = uuid4()
+    author_id = uuid4()
+    # Temperature out of range (must be 0.0 to 2.0)
+    config = {"temperature": 3.0}
+
+    draft = Draft(
+        project_id=project_id,
+        version_number=1,
+        prompt_text="Prompt",
+        model_configuration=config,
+        author_id=author_id,
+    )
+
+    manifest = draft.to_manifest(project_name="Test Project")
+    # Should fallback to 0.7
+    assert manifest.config.llm_config.temperature == 0.7
