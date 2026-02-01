@@ -12,6 +12,8 @@ import difflib
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from coreason_manifest.definitions.agent import AgentDefinition
+
 from coreason_foundry.api.schemas import OptimizationRequest
 from coreason_foundry.exceptions import ProjectNotFoundError
 from coreason_foundry.interfaces import (
@@ -173,3 +175,24 @@ class DraftManager:
             author_id=user_id,
             scratchpad=scratchpad_note,
         )
+
+    async def publish_draft(self, draft_id: UUID) -> AgentDefinition:
+        """
+        Publishes a draft by converting it to a strict AgentDefinition.
+        """
+        async with self.uow:
+            draft = await self.uow.drafts.get(draft_id)
+            if not draft:
+                raise ValueError(f"Draft {draft_id} not found.")
+
+            project = await self.uow.projects.get(draft.project_id)
+            if not project:
+                raise ValueError(f"Project {draft.project_id} not found.")
+
+        # Convert to manifest
+        manifest = draft.to_manifest(project_name=project.name)
+
+        # In a real scenario, we would save this to a registry.
+        # For now, we return it as the "Published" artifact.
+        logger.info(f"Published Draft v{draft.version_number} for Project {project.name}")
+        return manifest

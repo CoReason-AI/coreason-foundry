@@ -12,7 +12,18 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
+from coreason_manifest.definitions.agent import (
+    AgentDefinition,
+    AgentDependencies,
+    AgentInterface,
+    AgentMetadata,
+    AgentRuntimeConfig,
+    ModelConfig,
+)
+from coreason_manifest.definitions.topology import LogicNode
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from coreason_foundry.utils.hashing import compute_agent_hash
 
 
 class Project(BaseModel):
@@ -48,6 +59,79 @@ class Draft(BaseModel):
         if v < 1:
             raise ValueError("Version number must be positive")
         return v
+
+    def to_manifest(self, project_name: str) -> AgentDefinition:
+        """
+        Converts the Draft into a strict AgentDefinition.
+
+        Note: coreason-manifest v0.9.0 uses a Graph-based AgentRuntimeConfig and
+        does not natively support a 'system_prompt' or inline 'tools' definition.
+        This conversion produces a skeleton AgentDefinition with a dummy topology.
+        The system prompt and tools are NOT currently preserved in the manifest
+        due to schema limitations.
+        """
+        # 1. Prepare Version String
+        version_str = f"0.0.{self.version_number}"
+
+        # 2. Extract Model Config
+        # Ensure model and temperature exist
+        model = self.model_configuration.get("model", "gpt-4")
+        temperature = self.model_configuration.get("temperature", 0.7)
+
+        # Validate temperature
+        if not isinstance(temperature, (int, float)) or not (0.0 <= temperature <= 2.0):
+            temperature = 0.7
+
+        llm_config = ModelConfig(model=str(model), temperature=float(temperature))
+
+        # 3. Construct Metadata
+        metadata = AgentMetadata(
+            id=self.id,
+            version=version_str,
+            name=project_name,
+            author=str(self.author_id),
+            created_at=self.created_at,
+            requires_auth=False,
+        )
+
+        # 4. Construct Interface (Empty/Default)
+        interface = AgentInterface(inputs={}, outputs={}, injected_params=[])
+
+        # 5. Construct Runtime Config (Skeleton Topology)
+        # We create a single logic node to satisfy the graph requirement.
+        dummy_node = LogicNode(
+            id="main",
+            code="pass",  # Dummy code
+            type="logic",
+        )
+
+        runtime_config = AgentRuntimeConfig(nodes=[dummy_node], edges=[], entry_point="main", model_config=llm_config)
+
+        # 6. Construct Dependencies (Empty)
+        # Tools are not mapped because ToolRequirement requires URI/Hash,
+        # but Draft only has definitions.
+        dependencies = AgentDependencies(tools=[], libraries=())
+
+        # 7. Prepare raw data for hashing
+        # Matches the structure of the resulting AgentDefinition components
+        raw_data = {
+            "metadata": metadata.model_dump(mode="json"),
+            "interface": interface.model_dump(mode="json"),
+            "config": runtime_config.model_dump(mode="json"),
+            "dependencies": dependencies.model_dump(mode="json"),
+        }
+
+        # 8. Calculate Hash
+        integrity_hash = compute_agent_hash(raw_data)
+
+        # 9. Return Strict Object
+        return AgentDefinition(
+            metadata=metadata,
+            interface=interface,
+            config=runtime_config,
+            dependencies=dependencies,
+            integrity_hash=integrity_hash,
+        )
 
 
 class Comment(BaseModel):
